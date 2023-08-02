@@ -61,7 +61,9 @@ class FirestoreModel(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
+        self._setup_collections()
 
+    def _setup_collections(self):
         # Set the parent of all the collections
         for name, _ in self.__annotations__.items():
             attr = getattr(self, name)
@@ -87,13 +89,22 @@ class FirestoreModel(BaseModel):
         raise NotImplementedError("save() is not implemented")
 
     @classmethod
-    def find(cls, id: str) -> ModelType:
+    def find(cls, id: str, allow_empty: bool = False) -> ModelType:
         query_manager = QueryManager(cls.collection_name())
         d = query_manager.get(id)
-        print(d)
+
         if d is None:
-            raise ValueError(f"Could not find {cls.__name__} with id {id}")
+            if allow_empty:
+                empty_doc = cls.model_construct(id=id)
+                empty_doc._setup_collections()
+                return empty_doc
+            else:
+                raise ValueError(f"Could not find {cls.__name__} with id {id}")
         return cls.model_validate(d)
+
+    @classmethod
+    def empty_doc(cls, id) -> ModelType:
+        return cls(id=id)
 
     @classmethod
     def where(cls, field: str, operator: str, value: str) -> list[ModelType]:
