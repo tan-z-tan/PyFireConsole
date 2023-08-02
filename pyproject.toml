@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "pyfireconsole"
+version = "0.0.1"
+description = ""
+authors = ["Makoto Tanji <tanji.makoto@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10.0"
+google-cloud-firestore = "^2.11.1"
+google-auth = "^2.22.0"
+inflect = "^7.0.0"
+pydantic = "^2.1.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
