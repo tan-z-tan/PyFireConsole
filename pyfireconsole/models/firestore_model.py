@@ -1,10 +1,7 @@
-from typing import Any, Generic, Iterable, Optional, Type, TypeVar
-from pydantic import BaseModel, GetCoreSchemaHandler
-from pydantic.generics import GenericModel
+from typing import Generic, Iterable, Optional, Type, TypeVar
+from pydantic import BaseModel
 import inflect
-from pydantic_core import CoreSchema, core_schema
 from pyfireconsole.queries.query_manager import QueryManager
-from google.cloud.firestore import DocumentReference
 
 
 ModelType = TypeVar('ModelType', bound='FirestoreModel')
@@ -46,7 +43,7 @@ class Collection(Generic[ModelType]):
 
 
 class DocumentRef(BaseModel, Generic[ModelType]):
-    path: str = None
+    path: str
 
     # TODO: Implement reference class so that we can do this like this:
     # book.user_ref.get() => User object
