@@ -1,6 +1,6 @@
 # PyFireConsole
 <h1 style="text-align: center;">
-  <img src="logo.png" alt="PyFireConsole" height="120">
+  <img src="https://raw.githubusercontent.com/tan-z-tan/pyfireconsole/main/logo.png" alt="PyFireConsole" height="120">
 </h1>
 
 ## Introduction
