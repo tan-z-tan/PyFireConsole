@@ -8,37 +8,31 @@ ModelType = TypeVar('ModelType', bound='FirestoreModel')
 
 
 class Collection(Generic[ModelType]):
-    parent_model: Optional['FirestoreModel'] = None
-    model_class: Optional[Type[ModelType]] = None
-    _collection: Optional[Iterable[ModelType]] = None
+    model_class: Type[ModelType]
+    _parent_model: 'FirestoreModel'
+    _collection: Optional[Iterable[ModelType]]
 
     def __init__(self, model_class: Type[ModelType]):
         self.model_class = model_class
 
     def __iter__(self):
-        self._collection = self.parent_model._get_subcollection(self)
+        self._collection = self._parent_model._get_subcollection(self)
         for model in self._collection:
-            model._parent = self.parent_model
+            model._parent = self._parent_model
             yield model
 
-    @classmethod
-    def __get_validators__(cls):
-        breakpoint()
-        yield cls.validate
+    def obj_collection_name(self) -> str:
+        if self._parent_model is None:
+            raise Exception("Collection parent model is not set")
+        return f"{self._parent_model.obj_collection_name()}/{self._parent_model.id}/{inflect.engine().plural(self.model_class.__name__).lower()}"
 
-    @classmethod
-    def validate(cls, v, _):
-        breakpoint()
-        if isinstance(v, cls):
-            return v
-
-        if isinstance(v, Type) and issubclass(v, FirestoreModel):
-            return cls(v)
-
-        raise ValueError("Invalid value for a Collection field")
+    def where(self, field: str, operator: str, value: str) -> list[ModelType]:
+        query_manager = QueryManager(self.obj_collection_name())
+        docs = query_manager.where(field, operator, value)
+        return [self.model_class.model_validate(d) for d in docs]
 
     def set_parent(self, parent_model: 'FirestoreModel'):
-        self.parent_model = parent_model
+        self._parent_model = parent_model
         self._collection = None  # Invalidate cached data
 
 
@@ -53,7 +47,7 @@ class FirestoreModel(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    id: str
+    id: str  # Firestore document id
     _parent: Optional['FirestoreModel'] = None  # when a model is a subcollection, this is the parent model
 
     def __init__(self, **data):
@@ -63,7 +57,7 @@ class FirestoreModel(BaseModel):
     def _setup_collections(self):
         # Set the parent of all the collections
         for name, _ in self.__annotations__.items():
-            attr = getattr(self, name)
+            attr = getattr(self, name, None)
             if isinstance(attr, Collection):
                 attr.set_parent(self)
             elif isinstance(attr, DocumentRef):

@@ -17,7 +17,7 @@ class Query:
         if doc.exists:
             return dict(_recursive_to_dict(doc) or {}, id=doc.id)
         return None
-    
+
     def where(self, field: str, operator: str, value: str) -> list[Optional[Dict[str, Any]]]:
         docs = self.collection.where(filter=FieldFilter(field, operator, value)).stream()
         return [dict(_recursive_to_dict(doc) or {}, id=doc.id) for doc in docs]
