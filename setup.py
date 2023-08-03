@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyfireconsole',
-    version='0.0.1',
+    version='0.0.2',
     author='Makoto Tanji',
     author_email='tanji.makoto@gmail.com',
     description='An interactive console for Firestore based on Python ORM',
