@@ -1,4 +1,5 @@
 from google.cloud.firestore_v1 import DocumentSnapshot, DocumentReference, CollectionReference  # ignore this line
+from google.cloud.firestore_v1.base_query import FieldFilter
 from typing import Any, Dict, Optional
 
 
@@ -18,9 +19,7 @@ class Query:
         return None
     
     def where(self, field: str, operator: str, value: str) -> list[Optional[Dict[str, Any]]]:
-        docs = self.collection.where(field, operator, value).stream()
-        # merge id and dict
-        # return [doc.to_dict() for doc in docs]
+        docs = self.collection.where(filter=FieldFilter(field, operator, value)).stream()
         return [dict(_recursive_to_dict(doc) or {}, id=doc.id) for doc in docs]
 
     def create(self, **kwargs) -> Optional[Dict]:
