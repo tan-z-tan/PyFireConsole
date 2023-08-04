@@ -79,7 +79,7 @@ class PyfireDoc(BaseModel):
         raise NotImplementedError("save() is not implemented")
 
     @classmethod
-    def find(cls, id: str, allow_empty: bool = False) -> ModelType:
+    def find(cls, id: str, allow_empty: bool = False) -> 'PyfireDoc':
         d = QueryRunner(cls.collection_name()).get(id)
 
         if d is None:
@@ -92,11 +92,11 @@ class PyfireDoc(BaseModel):
         return cls.model_validate(d)
 
     @classmethod
-    def empty_doc(cls, id) -> ModelType:
+    def empty_doc(cls, id) -> 'PyfireDoc':
         return cls(id=id)
 
     @classmethod
-    def where(cls, field: str, operator: str, value: str) -> list[ModelType]:
+    def where(cls, field: str, operator: str, value: str) -> list['PyfireDoc']:
         docs = QueryRunner(cls.collection_name()).where(field, operator, value)
         return [cls.model_validate(d) for d in docs]
 
