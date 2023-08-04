@@ -4,12 +4,12 @@ import inflect
 from pyfireconsole.queries.query_runner import QueryRunner
 
 
-ModelType = TypeVar('ModelType', bound='FirestoreModel')
+ModelType = TypeVar('ModelType', bound='PyfireDoc')
 
 
-class Collection(Generic[ModelType]):
+class PyfireCollection(Generic[ModelType]):
     model_class: Type[ModelType]
-    _parent_model: 'FirestoreModel'
+    _parent_model: 'PyfireDoc'
     _collection: Optional[Iterable[ModelType]]
 
     def __init__(self, model_class: Type[ModelType]):
@@ -30,7 +30,7 @@ class Collection(Generic[ModelType]):
         docs = QueryRunner(self.obj_collection_name()).where(field, operator, value)
         return [self.model_class.model_validate(d) for d in docs]
 
-    def set_parent(self, parent_model: 'FirestoreModel'):
+    def set_parent(self, parent_model: 'PyfireDoc'):
         self._parent_model = parent_model
         self._collection = None  # Invalidate cached data
 
@@ -42,12 +42,12 @@ class DocumentRef(BaseModel, Generic[ModelType]):
     # book.user_ref.get() => User object
 
 
-class FirestoreModel(BaseModel):
+class PyfireDoc(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
     id: str  # Firestore document id
-    _parent: Optional['FirestoreModel'] = None  # when a model is a subcollection, this is the parent model
+    _parent: Optional['PyfireDoc'] = None  # when a model is a subcollection, this is the parent model
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -57,12 +57,12 @@ class FirestoreModel(BaseModel):
         # Set the parent of all the collections
         for name, _ in self.__annotations__.items():
             attr = getattr(self, name, None)
-            if isinstance(attr, Collection):
+            if isinstance(attr, PyfireCollection):
                 attr.set_parent(self)
             elif isinstance(attr, DocumentRef):
                 pass
 
-    def _get_subcollection(self, collection: Collection) -> Iterable[ModelType]:
+    def _get_subcollection(self, collection: PyfireCollection) -> Iterable[ModelType]:
         collection_name = f"{self.obj_collection_name()}/{self.id}/{inflect.engine().plural(collection.model_class.__name__).lower()}"
         docs = QueryRunner(collection_name).all()
         for doc in docs:
