@@ -1,7 +1,7 @@
 from typing import Generic, Iterable, Optional, Type, TypeVar
 from pydantic import BaseModel
 import inflect
-from pyfireconsole.queries.query_manager import QueryManager
+from pyfireconsole.queries.query_runner import QueryRunner
 
 
 ModelType = TypeVar('ModelType', bound='FirestoreModel')
@@ -27,8 +27,7 @@ class Collection(Generic[ModelType]):
         return f"{self._parent_model.obj_collection_name()}/{self._parent_model.id}/{inflect.engine().plural(self.model_class.__name__).lower()}"
 
     def where(self, field: str, operator: str, value: str) -> list[ModelType]:
-        query_manager = QueryManager(self.obj_collection_name())
-        docs = query_manager.where(field, operator, value)
+        docs = QueryRunner(self.obj_collection_name()).where(field, operator, value)
         return [self.model_class.model_validate(d) for d in docs]
 
     def set_parent(self, parent_model: 'FirestoreModel'):
@@ -65,9 +64,9 @@ class FirestoreModel(BaseModel):
 
     def _get_subcollection(self, collection: Collection) -> Iterable[ModelType]:
         collection_name = f"{self.obj_collection_name()}/{self.id}/{inflect.engine().plural(collection.model_class.__name__).lower()}"
-        query_manager = QueryManager(collection_name)
-        for id, data in query_manager.all():
-            yield collection.model_class(**data, id=id)
+        docs = QueryRunner(collection_name).all()
+        for doc in docs:
+            yield collection.model_class(**doc)
 
     def obj_collection_name(self) -> str:
         db_name = self.__class__.collection_name()
@@ -81,8 +80,7 @@ class FirestoreModel(BaseModel):
 
     @classmethod
     def find(cls, id: str, allow_empty: bool = False) -> ModelType:
-        query_manager = QueryManager(cls.collection_name())
-        d = query_manager.get(id)
+        d = QueryRunner(cls.collection_name()).get(id)
 
         if d is None:
             if allow_empty:
@@ -99,8 +97,7 @@ class FirestoreModel(BaseModel):
 
     @classmethod
     def where(cls, field: str, operator: str, value: str) -> list[ModelType]:
-        query_manager = QueryManager(cls.collection_name())
-        docs = query_manager.where(field, operator, value)
+        docs = QueryRunner(cls.collection_name()).where(field, operator, value)
         return [cls.model_validate(d) for d in docs]
 
     @classmethod
