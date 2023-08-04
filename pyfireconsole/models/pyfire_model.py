@@ -4,19 +4,19 @@ import inflect
 from pydantic import BaseModel
 
 from pyfireconsole.queries.query_runner import QueryRunner
+from pyfireconsole.queries.where_clouse import WhereCondition
 
 ModelType = TypeVar('ModelType', bound='PyfireDoc')
 
 
 class PyfireCollection(Generic[ModelType]):
     model_class: Type[ModelType]
-    _parent_model: Optional['PyfireDoc']
-    _raw_data: Optional[Iterable[dict]]
+    _parent_model: Optional['PyfireDoc'] = None
+    _collection: Optional[Iterable[dict]] = None
+    _where_cond: Optional[WhereCondition] = None
 
     def __init__(self, model_class: Type[ModelType]):
         self.model_class = model_class
-        self._parent_model = None
-        self._raw_data = None
 
     def obj_ref_key(self) -> str:
         """ Represents the key of firestore entity """
@@ -33,21 +33,22 @@ class PyfireCollection(Generic[ModelType]):
             return f"{self._parent_model.obj_ref_key()}/{leaf_collection_name}"  # e.g. "users/123/books"
 
     def __iter__(self):
-        if self._raw_data is None:
-            self._raw_data = QueryRunner(self.obj_ref_key()).all()
+        if self._where_cond is not None:
+            self._collection = QueryRunner(self.obj_ref_key()).where(self._where_cond.field, self._where_cond.operator, self._where_cond.value)
+        else:
+            self._collection = QueryRunner(self.obj_ref_key()).all()
 
-        for doc in self._raw_data:
+        for doc in self._collection:
             obj = self.model_class(**doc)
             obj._parent = self._parent_model
             yield obj
 
     def where(self, field: str, operator: str, value: str) -> 'PyfireCollection[ModelType]':
         coll = PyfireCollection(self.model_class)
+        coll._where_cond = WhereCondition(field, operator, value)
         if self._parent_model is not None:
             coll.set_parent(self._parent_model)
-        docs = QueryRunner(self.obj_collection_name()).where(field, operator, value)
-        coll._raw_data = docs
-        # [self.model_class.model_validate(d) for d in docs]
+
         return coll
 
     def __str__(self) -> str:
@@ -114,8 +115,7 @@ class PyfireDoc(BaseModel):
     @classmethod
     def where(cls, field: str, operator: str, value: str) -> PyfireCollection['PyfireDoc']:
         coll = PyfireCollection(cls)
-        docs = QueryRunner(cls.collection_name()).where(field, operator, value)
-        coll._raw_data = docs
+        coll._where_cond = WhereCondition(field, operator, value)
         return coll
 
     @classmethod
