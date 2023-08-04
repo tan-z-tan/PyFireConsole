@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pyfireconsole.models.firestore_model import PyfireCollection, DocumentRef, PyfireDoc
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
 from pyfireconsole.db.connection import FirestoreConnection
 
 """
@@ -24,16 +24,22 @@ We assume that you have a firestore database with the following structure:
                 - name: str
         - publisher_ref: Reference
 """
+
+
 class User(PyfireDoc):
     name: str
+
     email: str
+
 
 class Publisher(PyfireDoc):
     name: str
     address: Optional[str]
 
+
 class Tag(PyfireDoc):
     name: str
+
 
 class Book(PyfireDoc):
     title: str

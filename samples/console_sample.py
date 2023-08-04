@@ -1,19 +1,23 @@
 from datetime import datetime
 from typing import Optional
-from pyfireconsole.models.firestore_model import PyfireCollection, DocumentRef, PyfireDoc
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
 from pyfireconsole.db.connection import FirestoreConnection
 from pyfireconsole import PyFireConsole
+
 
 class User(PyfireDoc):
     name: str
     email: str
 
+
 class Publisher(PyfireDoc):
     name: str
     address: Optional[str]
 
+
 class Tag(PyfireDoc):
     name: str
+
 
 class Book(PyfireDoc):
     title: str
