@@ -22,6 +22,9 @@ class FirestoreConnection:
             else:
                 self.db = firestore.Client(project=project_id)
 
+    def set_db(self, db):
+        self.db = db
+
     def collection(self, collection_name):
         if self.db is None:
             raise ValueError("FirestoreConnection is not initialized. Call initialize() first.")
