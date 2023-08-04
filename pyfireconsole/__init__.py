@@ -1,3 +1,3 @@
-from pyfireconsole.models.firestore_model import FirestoreModel, Collection, DocumentRef
-from pyfireconsole.db.connection import FirestoreConnection
-from pyfireconsole.console.pyfireconsole import PyFireConsole
+from pyfireconsole.console.pyfireconsole import PyFireConsole  # noqa: F401
+from pyfireconsole.db.connection import FirestoreConnection  # noqa: F401
+from pyfireconsole.models.pyfire_model import DocumentRef, PyfireCollection, PyfireDoc  # noqa: F401

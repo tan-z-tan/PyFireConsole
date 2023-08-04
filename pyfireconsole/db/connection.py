@@ -1,11 +1,12 @@
-import google.auth
-from google.cloud import firestore
-from google.oauth2.service_account import Credentials as ServiceAccountCredentials
 from typing import Optional
+
+from google.cloud import firestore
+from google.oauth2.service_account import Credentials as ServiceAccountCredentials  # type: ignore
 
 
 class FirestoreConnection:
     _instance: Optional['FirestoreConnection'] = None
+    db: Optional[firestore.Client] = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

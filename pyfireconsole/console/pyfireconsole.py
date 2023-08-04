@@ -1,10 +1,11 @@
-from typing import Optional
-from IPython.terminal.embed import embed
-import os
-import sys
 import glob
 import importlib.util
 import inspect
+import os
+import sys
+from typing import Optional
+
+from IPython.terminal.embed import embed
 
 
 class PyFireConsole:
