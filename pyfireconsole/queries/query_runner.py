@@ -1,8 +1,9 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from pyfireconsole.db.connection import conn
 from pyfireconsole.queries.all_query import AllQuery
 from pyfireconsole.queries.get_query import GetQuery
+from pyfireconsole.queries.save_query import SaveQuery
 from pyfireconsole.queries.where_query import WhereQuery
 
 
@@ -19,3 +20,9 @@ class QueryRunner:
 
     def all(self) -> list[Dict]:
         return AllQuery(self.collection_key).set_conn(self.conn).exec()
+
+    def save(self, id: str, data: dict) -> str | None:
+        return SaveQuery(self.collection_key, id, data).set_conn(self.conn).exec()
+
+    def create(self, data: dict) -> str | None:
+        return SaveQuery(self.collection_key, None, data).set_conn(self.conn).exec()

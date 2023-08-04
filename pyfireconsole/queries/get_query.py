@@ -15,4 +15,4 @@ class GetQuery(AbstractQuery):
         doc = doc_ref.get()
         if doc.exists:
             return dict(_doc_to_dict(doc) or {}, id=doc.id)
-        return None
+        raise DocNotFoundException(f"Document with id {self.doc_id} not found")

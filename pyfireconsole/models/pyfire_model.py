@@ -2,6 +2,7 @@ from typing import Generic, Iterable, Optional, Type, TypeVar
 
 import inflect
 from pydantic import BaseModel
+from pyfireconsole.queries.get_query import DocNotFoundException
 
 from pyfireconsole.queries.query_runner import QueryRunner
 from pyfireconsole.queries.where_clouse import WhereCondition
@@ -68,7 +69,7 @@ class PyfireDoc(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    id: str  # Firestore document id
+    id: Optional[str] = None  # Firestore document id
     _parent: Optional[PyfireCollection] = None  # when a model is a subcollection, this is the parent model
 
     def __init__(self, **data):
@@ -86,24 +87,44 @@ class PyfireDoc(BaseModel):
 
     def obj_ref_key(self) -> str:
         """ Represents the key of firestore entity """
+        return f"{self.obj_collection_name}/{self.id}"
+
+    def obj_collection_name(self) -> str:
+        """ Represents the name of firestore collection """
         db_name = self.__class__.collection_name()
         if self._parent is None:
-            return f"{db_name}/{self.id}"
+            return f"{db_name}"
         else:
-            return f"{self._parent.obj_ref_key()}/{db_name}/{self.id}"
+            return f"{self._parent.obj_ref_key()}/{db_name}"
 
-    def save(self) -> None:
-        raise NotImplementedError
+    def save(self) -> 'PyfireDoc':
+        data = self.model_dump()
+        if self.id is None:
+            id = QueryRunner(self.obj_collection_name()).create(data)
+            if id:
+                self.id = id
+        else:
+            id = QueryRunner(self.obj_collection_name()).save(self.id, data)
+
+        if id is None:
+            raise ValueError("Could not save document")
+        return self
+
+    @classmethod
+    def new(cls, data) -> 'PyfireDoc':
+        doc = cls(**data)
+        doc.save()
+        return doc
 
     @classmethod
     def find(cls, id: str, allow_empty: bool = False) -> 'PyfireDoc':
-        d = QueryRunner(cls.collection_name()).get(id)
-
-        if d is None:
+        try:
+            d = QueryRunner(cls.collection_name()).get(id)
+        except DocNotFoundException as e:
             if allow_empty:
                 return cls.empty_doc(id)
             else:
-                raise ValueError(f"Could not find {cls.__name__} with id {id}")
+                raise e
         return cls.model_validate(d)
 
     @classmethod

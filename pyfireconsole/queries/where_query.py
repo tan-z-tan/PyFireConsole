@@ -12,6 +12,8 @@ class WhereQuery(AbstractQuery):
 
     def exec(self) -> list[dict]:
         docs = self.collection_ref(self.collection_key).where(
-            filter=FieldFilter(self.field, self.operator, self.value)
+            # We can't use FieldFilter because we use python-mock-firestore lib for testing
+            # filter=FieldFilter(self.field, self.operator, self.value)
+            self.field, self.operator, self.value
         ).stream()
         return [dict(_doc_to_dict(doc) or {}, id=doc.id) for doc in docs]
