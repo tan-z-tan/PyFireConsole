@@ -11,11 +11,12 @@ ModelType = TypeVar('ModelType', bound='PyfireDoc')
 class PyfireCollection(Generic[ModelType]):
     model_class: Type[ModelType]
     _parent_model: Optional['PyfireDoc']
-    _collection: Iterable[ModelType] = []
+    _raw_data: Optional[Iterable[dict]]
 
     def __init__(self, model_class: Type[ModelType]):
         self.model_class = model_class
         self._parent_model = None
+        self._raw_data = None
 
     def obj_ref_key(self) -> str:
         """ Represents the key of firestore entity """
@@ -32,9 +33,10 @@ class PyfireCollection(Generic[ModelType]):
             return f"{self._parent_model.obj_ref_key()}/{leaf_collection_name}"  # e.g. "users/123/books"
 
     def __iter__(self):
-        docs = QueryRunner(self.obj_ref_key()).all()
+        if self._raw_data is None:
+            self._raw_data = QueryRunner(self.obj_ref_key()).all()
 
-        for doc in docs:
+        for doc in self._raw_data:
             obj = self.model_class(**doc)
             obj._parent = self._parent_model
             yield obj
@@ -44,7 +46,8 @@ class PyfireCollection(Generic[ModelType]):
         if self._parent_model is not None:
             coll.set_parent(self._parent_model)
         docs = QueryRunner(self.obj_collection_name()).where(field, operator, value)
-        coll._collection = [self.model_class.model_validate(d) for d in docs]
+        coll._raw_data = docs
+        # [self.model_class.model_validate(d) for d in docs]
         return coll
 
     def __str__(self) -> str:
@@ -112,10 +115,8 @@ class PyfireDoc(BaseModel):
     def where(cls, field: str, operator: str, value: str) -> PyfireCollection['PyfireDoc']:
         coll = PyfireCollection(cls)
         docs = QueryRunner(cls.collection_name()).where(field, operator, value)
-        coll._collection = [cls.model_validate(d) for d in docs]
+        coll._raw_data = docs
         return coll
-        # docs = QueryRunner(cls.collection_name()).where(field, operator, value)
-        # return [cls.model_validate(d) for d in docs]
 
     @classmethod
     def collection_name(cls) -> str:
