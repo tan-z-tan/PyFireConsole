@@ -44,6 +44,12 @@ class PyfireCollection(Generic[ModelType]):
             obj._parent = self._parent_model
             yield obj
 
+    def first(self) -> ModelType | None:
+        try:
+            return next(iter(self))
+        except StopIteration:
+            return None
+
     def where(self, field: str, operator: str, value: str) -> 'PyfireCollection[ModelType]':
         coll = PyfireCollection(self.model_class)
         coll._where_cond = WhereCondition(field, operator, value)
@@ -156,6 +162,11 @@ class PyfireDoc(BaseModel):
             else:
                 raise e
         return cls.model_validate(d)
+
+    @classmethod
+    def first(cls) -> 'PyfireDoc':
+        coll = PyfireCollection(cls)
+        return coll.first()
 
     @classmethod
     def empty_doc(cls, id) -> 'PyfireDoc':

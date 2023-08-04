@@ -95,8 +95,6 @@ def test_find_not_found():
 
 
 def test_subcollection():
-    FirestoreConnection().set_db(MockFirestore())
-
     book = Book.new({
         "title": "Math",
         "user_id": "12345",
@@ -114,3 +112,18 @@ def test_subcollection():
     tag_names = [tag.name for tag in book.tags]
     assert "mathmatics" in tag_names
     assert "textbook" in tag_names
+
+
+def test_first():
+    user1 = User.new({
+        "name": "John",
+        "email": "",
+    }).save()
+    user2 = User.new({
+        "name": "Mary",
+        "email": "",
+    }).save()
+
+    user = User.first()
+
+    assert user.id in [user1.id, user2.id]
