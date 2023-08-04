@@ -52,6 +52,20 @@ class PyfireCollection(Generic[ModelType]):
 
         return coll
 
+    def add(self, entity: ModelType) -> ModelType:
+        assert isinstance(entity, self.model_class)
+
+        entity._parent = self
+        data = entity.model_field_dump()
+        if entity.id is None:
+            _id = QueryRunner(self.obj_collection_name()).create(data)
+            if _id:
+                entity.id = _id
+        else:
+            raise ValueError("Could not save document")
+
+        return entity
+
     def __str__(self) -> str:
         if self._parent_model is None:
             return f"{self.__class__.__name__}[{self.model_class.__name__}]"
@@ -87,7 +101,7 @@ class PyfireDoc(BaseModel):
 
     def obj_ref_key(self) -> str:
         """ Represents the key of firestore entity """
-        return f"{self.obj_collection_name}/{self.id}"
+        return f"{self.obj_collection_name()}/{self.id}"
 
     def obj_collection_name(self) -> str:
         """ Represents the name of firestore collection """
@@ -97,23 +111,39 @@ class PyfireDoc(BaseModel):
         else:
             return f"{self._parent.obj_ref_key()}/{db_name}"
 
-    def save(self) -> 'PyfireDoc':
+    def model_field_dump(self) -> dict:
+        """
+        Returns the model fields as dict. This is used for saving the model to firestore.
+        Does not include collection fields.
+        """
         data = self.model_dump()
-        if self.id is None:
-            id = QueryRunner(self.obj_collection_name()).create(data)
-            if id:
-                self.id = id
-        else:
-            id = QueryRunner(self.obj_collection_name()).save(self.id, data)
 
-        if id is None:
+        # filter collection fields
+        for name, _ in self.__annotations__.items():
+            attr = getattr(self, name, None)
+            if isinstance(attr, PyfireCollection):
+                data.pop(name)
+        if "id" in data:  # TODO when original doc has id field. This should be False?
+            data.pop('id')
+
+        return data
+
+    def save(self) -> 'PyfireDoc':
+        data = self.model_field_dump()
+        if self.id is None:
+            _id = QueryRunner(self.obj_collection_name()).create(data)
+            if _id:
+                self.id = _id
+        else:
+            _id = QueryRunner(self.obj_collection_name()).save(self.id, data)
+
+        if _id is None:
             raise ValueError("Could not save document")
         return self
 
     @classmethod
     def new(cls, data) -> 'PyfireDoc':
         doc = cls(**data)
-        doc.save()
         return doc
 
     @classmethod

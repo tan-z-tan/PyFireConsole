@@ -92,3 +92,25 @@ def test_find_not_found():
     # case: there is no document
     with pytest.raises(DocNotFoundException):
         Book.find("99999")
+
+
+def test_subcollection():
+    FirestoreConnection().set_db(MockFirestore())
+
+    book = Book.new({
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": datetime.now(),
+        "authors": ["John", "Mary"],
+        "publisher_ref": "publisher/12345",
+    }).save()
+
+    book.tags.add(Tag.new({"name": "mathmatics"}))
+    book.tags.add(Tag.new({"name": "textbook"}))
+    # book.save()
+
+    assert len([t for t in book.tags]) == 2
+
+    tag_names = [tag.name for tag in book.tags]
+    assert "mathmatics" in tag_names
+    assert "textbook" in tag_names

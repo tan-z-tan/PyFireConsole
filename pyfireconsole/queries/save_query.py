@@ -1,5 +1,5 @@
 from typing import Optional
-from pyfireconsole.queries.abstract_query import AbstractQuery, _doc_to_dict
+from pyfireconsole.queries.abstract_query import AbstractQuery
 
 
 class SaveQuery(AbstractQuery):

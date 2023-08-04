@@ -6,5 +6,5 @@ class AllQuery(AbstractQuery):
         self.collection_key = collection_key
 
     def exec(self) -> list[dict]:
-        docs = self.collection_ref(self.collection_key).get()
+        docs = self.collection_ref(self.collection_key).stream()
         return [dict(_doc_to_dict(doc) or {}, id=doc.id) for doc in docs]
