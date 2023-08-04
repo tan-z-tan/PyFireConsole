@@ -1,7 +1,7 @@
-import google.auth
+from typing import Optional
+
 from google.cloud import firestore
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
-from typing import Optional
 
 
 class FirestoreConnection:

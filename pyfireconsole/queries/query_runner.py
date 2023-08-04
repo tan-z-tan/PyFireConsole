@@ -1,8 +1,9 @@
 from typing import Dict
+
+from pyfireconsole.db.connection import conn
+from pyfireconsole.queries.all_query import AllQuery
 from pyfireconsole.queries.get_query import GetQuery
 from pyfireconsole.queries.where_query import WhereQuery
-from pyfireconsole.queries.all_query import AllQuery
-from pyfireconsole.db.connection import conn
 
 
 class QueryRunner:

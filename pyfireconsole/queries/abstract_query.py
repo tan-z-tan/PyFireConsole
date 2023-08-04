@@ -1,5 +1,7 @@
 from typing import Dict, Optional
-from google.cloud.firestore_v1.document import DocumentSnapshot, DocumentReference
+
+from google.cloud.firestore_v1.document import DocumentReference, DocumentSnapshot
+
 from pyfireconsole.db.connection import FirestoreConnection
 
 

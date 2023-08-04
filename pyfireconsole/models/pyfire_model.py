@@ -1,4 +1,5 @@
 from typing import Generic, Iterable, Optional, Type, TypeVar
+
 import inflect
 from pydantic import BaseModel
 

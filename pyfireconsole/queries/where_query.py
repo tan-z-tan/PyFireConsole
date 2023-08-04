@@ -1,5 +1,6 @@
-from pyfireconsole.queries.abstract_query import AbstractQuery, _doc_to_dict
 from google.cloud.firestore_v1.base_query import FieldFilter
+
+from pyfireconsole.queries.abstract_query import AbstractQuery, _doc_to_dict
 
 
 class WhereQuery(AbstractQuery):
