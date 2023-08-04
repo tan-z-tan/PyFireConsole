@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyfireconsole',
-    version='0.0.2',
+    version='0.0.3',
     author='Makoto Tanji',
     author_email='tanji.makoto@gmail.com',
     description='An interactive console for Firestore based on Python ORM',
@@ -14,9 +14,9 @@ setup(
     install_requires=[
         'google-cloud-firestore>=2.0.0,<3.0.0',
         'google-auth>=2.0.0,<3.0.0',
-        'inflect>=7.0.0,<8.0.0',
+        'inflect>=6.0.0,<8.0.0',
         'pydantic>=2.0.1,<3.0.0',
-        'ipython>=8.0.1,<9.0.0',
+        'ipython>=7.0.1,<9.0.0',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
