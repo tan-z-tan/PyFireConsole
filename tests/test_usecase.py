@@ -1,8 +1,12 @@
 from datetime import datetime
 from typing import Optional
-from pyfireconsole.db.connection import FirestoreConnection
+
+import pytest
+from pyfireconsole.db.connection import FirestoreConnection, NotConnectedException
 from pyfireconsole.models.pyfire_model import DocumentRef, PyfireCollection, PyfireDoc
-from mockfirestore import MockFirestore  # type: ignore
+from mockfirestore import MockFirestore
+
+from pyfireconsole.queries.get_query import DocNotFoundException  # type: ignore
 
 
 class I18n_Name(PyfireDoc):
@@ -22,7 +26,7 @@ class User(PyfireDoc):
 
 class Publisher(PyfireDoc):
     name: str
-    address: Optional[str]
+    address: Optional[str] = None
 
 
 class Book(PyfireDoc):
@@ -30,15 +34,61 @@ class Book(PyfireDoc):
     user_id: str
     published_at: datetime
     authors: list[str]
-    edit_info: Optional[dict[str, object]]
+    edit_info: Optional[dict[str, object]] = None
     tags: PyfireCollection[Tag] = PyfireCollection(Tag)
     publisher_ref: DocumentRef[Publisher] | str
     PyfireDoc.belongs_to(User)  # book.user
 
 
-def test_find():
-    mock_db = MockFirestore()
-    FirestoreConnection().set_db(mock_db)
+def test_no_connection():
+    """
+    When there is no connection, it should raise NotConnectedException
+    """
+    with pytest.raises(NotConnectedException):
+        Book.find("12345")
 
-    book = Book.where("name", "==", "test")
-    assert book.__class__ == PyfireCollection
+
+def test_save_find():
+    # We use mockfirestore to mock firestore operations.
+    # From now on the tests, db is available.
+    FirestoreConnection().set_db(MockFirestore())
+
+    # case: create a document
+    book = Book.new({
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": datetime.now(),
+        "authors": ["John", "Mary"],
+        "publisher_ref": "publisher/12345",
+    }).save()
+    assert book.__class__ == Book
+    assert book.title == "Math"
+    assert book.id is not None
+
+    book2 = Book.new({
+        "title": "History",
+        "user_id": "12345",
+        "published_at": datetime.now(),
+        "authors": ["John", "Mary"],
+        "publisher_ref": "publisher/abcde",
+    }).save()
+    assert book2.__class__ == Book
+    assert book2.title == "History"
+    assert book2.id is not None
+
+    # find
+    found_book = Book.find(book.id)
+    assert found_book.__class__ == Book
+    assert found_book.title == "Math"
+    assert found_book.id == book.id
+
+    # where
+    books = Book.where("title", "==", "Math")
+    assert books.__class__ == PyfireCollection
+    assert len([b for b in books]) == 1
+
+
+def test_find_not_found():
+    # case: there is no document
+    with pytest.raises(DocNotFoundException):
+        Book.find("99999")
