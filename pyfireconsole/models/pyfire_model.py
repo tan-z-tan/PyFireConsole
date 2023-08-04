@@ -1,38 +1,55 @@
 from typing import Generic, Iterable, Optional, Type, TypeVar
-from pydantic import BaseModel
 import inflect
-from pyfireconsole.queries.query_runner import QueryRunner
+from pydantic import BaseModel
 
+from pyfireconsole.queries.query_runner import QueryRunner
 
 ModelType = TypeVar('ModelType', bound='PyfireDoc')
 
 
 class PyfireCollection(Generic[ModelType]):
     model_class: Type[ModelType]
-    _parent_model: 'PyfireDoc'
-    _collection: Optional[Iterable[ModelType]]
+    _parent_model: Optional['PyfireDoc']
+    _collection: Iterable[ModelType] = []
 
     def __init__(self, model_class: Type[ModelType]):
         self.model_class = model_class
+        self._parent_model = None
 
-    def __iter__(self):
-        self._collection = self._parent_model._get_subcollection(self)
-        for model in self._collection:
-            model._parent = self._parent_model
-            yield model
-
-    def obj_collection_name(self) -> str:
-        if self._parent_model is None:
-            raise Exception("Collection parent model is not set")
-        return f"{self._parent_model.obj_collection_name()}/{self._parent_model.id}/{inflect.engine().plural(self.model_class.__name__).lower()}"
-
-    def where(self, field: str, operator: str, value: str) -> list[ModelType]:
-        docs = QueryRunner(self.obj_collection_name()).where(field, operator, value)
-        return [self.model_class.model_validate(d) for d in docs]
+    def obj_ref_key(self) -> str:
+        """ Represents the key of firestore entity """
+        return self.obj_collection_name()
 
     def set_parent(self, parent_model: 'PyfireDoc'):
         self._parent_model = parent_model
-        self._collection = None  # Invalidate cached data
+
+    def obj_collection_name(self) -> str:
+        leaf_collection_name = self.model_class.collection_name()
+        if self._parent_model is None:
+            return leaf_collection_name  # e.g. "users"
+        else:
+            return f"{self._parent_model.obj_ref_key()}/{leaf_collection_name}"  # e.g. "users/123/books"
+
+    def __iter__(self):
+        docs = QueryRunner(self.obj_ref_key()).all()
+
+        for doc in docs:
+            obj = self.model_class(**doc)
+            obj._parent = self._parent_model
+            yield obj
+
+    def where(self, field: str, operator: str, value: str) -> 'PyfireCollection[ModelType]':
+        coll = PyfireCollection(self.model_class)
+        if self._parent_model is not None:
+            coll.set_parent(self._parent_model)
+        docs = QueryRunner(self.obj_collection_name()).where(field, operator, value)
+        coll._collection = [self.model_class.model_validate(d) for d in docs]
+        return coll
+
+    def __str__(self) -> str:
+        if self._parent_model is None:
+            return f"{self.__class__.__name__}[{self.model_class.__name__}]"
+        return f"{self.__class__.__name__}[{self.model_class.__name__}](parent={self._parent_model.__class__.__name__})"
 
 
 class DocumentRef(BaseModel, Generic[ModelType]):
@@ -47,7 +64,7 @@ class PyfireDoc(BaseModel):
         arbitrary_types_allowed = True
 
     id: str  # Firestore document id
-    _parent: Optional['PyfireDoc'] = None  # when a model is a subcollection, this is the parent model
+    _parent: Optional[PyfireCollection] = None  # when a model is a subcollection, this is the parent model
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -62,21 +79,16 @@ class PyfireDoc(BaseModel):
             elif isinstance(attr, DocumentRef):
                 pass
 
-    def _get_subcollection(self, collection: PyfireCollection) -> Iterable[ModelType]:
-        collection_name = f"{self.obj_collection_name()}/{self.id}/{inflect.engine().plural(collection.model_class.__name__).lower()}"
-        docs = QueryRunner(collection_name).all()
-        for doc in docs:
-            yield collection.model_class(**doc)
-
-    def obj_collection_name(self) -> str:
+    def obj_ref_key(self) -> str:
+        """ Represents the key of firestore entity """
         db_name = self.__class__.collection_name()
         if self._parent is None:
-            return db_name
+            return f"{db_name}/{self.id}"
         else:
-            return f"{self._parent.obj_collection_name()}/{self._parent.id}/{db_name}"
+            return f"{self._parent.obj_ref_key()}/{db_name}/{self.id}"
 
-    def save(self):
-        raise NotImplementedError("save() is not implemented")
+    def save(self) -> None:
+        raise NotImplementedError
 
     @classmethod
     def find(cls, id: str, allow_empty: bool = False) -> 'PyfireDoc':
@@ -84,21 +96,25 @@ class PyfireDoc(BaseModel):
 
         if d is None:
             if allow_empty:
-                empty_doc = cls.model_construct(id=id)
-                empty_doc._setup_collections()
-                return empty_doc
+                return cls.empty_doc(id)
             else:
                 raise ValueError(f"Could not find {cls.__name__} with id {id}")
         return cls.model_validate(d)
 
     @classmethod
     def empty_doc(cls, id) -> 'PyfireDoc':
-        return cls(id=id)
+        doc = cls.model_construct(id=id)
+        doc._setup_collections()
+        return doc
 
     @classmethod
-    def where(cls, field: str, operator: str, value: str) -> list['PyfireDoc']:
+    def where(cls, field: str, operator: str, value: str) -> PyfireCollection['PyfireDoc']:
+        coll = PyfireCollection(cls)
         docs = QueryRunner(cls.collection_name()).where(field, operator, value)
-        return [cls.model_validate(d) for d in docs]
+        coll._collection = [cls.model_validate(d) for d in docs]
+        return coll
+        # docs = QueryRunner(cls.collection_name()).where(field, operator, value)
+        # return [cls.model_validate(d) for d in docs]
 
     @classmethod
     def collection_name(cls) -> str:
@@ -119,3 +135,6 @@ class PyfireDoc(BaseModel):
         db_field = db_field or f"{model_class.__name__.lower()}_id"
         attr_name = attr_name or model_class.__name__.lower()
         setattr(cls, model_class.__name__.lower(), property(getter_method))
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({super().__str__()})"
