@@ -1,4 +1,4 @@
-from typing import Generic, Iterable, Optional, Type, TypeVar
+from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
 
 import inflect
 from pydantic import BaseModel
@@ -40,6 +40,7 @@ class PyfireCollection(Generic[ModelType]):
             self._collection = QueryRunner(self.obj_ref_key()).all()
 
         for doc in self._collection:
+            doc = self.model_class.model_field_load(doc)
             obj = self.model_class(**doc)
             obj._parent = self
             yield obj
@@ -124,7 +125,6 @@ class PyfireDoc(BaseModel):
         """
         data = self.model_dump()
 
-        # filter collection fields
         for name, _ in self.__annotations__.items():
             attr = getattr(self, name, None)
             if isinstance(attr, PyfireCollection):
@@ -132,6 +132,18 @@ class PyfireDoc(BaseModel):
         # if "id" in data:  # TODO when original doc has id field. This should be False?
         #     data.pop('id')
 
+        return data
+
+    @classmethod
+    def model_field_load(cls, data: dict) -> dict:
+        """
+        Filters out collection fields from the data dict.
+        """
+        for name, klass in cls.__annotations__.items():
+            if name not in data:
+                continue
+            if get_origin(klass) == PyfireCollection:
+                data.pop(name)
         return data
 
     def save(self) -> 'PyfireDoc':
@@ -156,6 +168,9 @@ class PyfireDoc(BaseModel):
     def find(cls, id: str, allow_empty: bool = False) -> 'PyfireDoc':
         try:
             d = QueryRunner(cls.collection_name()).get(id)
+            if d is None:
+                raise DocNotFoundException(f"Document {cls.collection_name()}/{id} not found")
+            d = cls.model_field_load(d)
         except DocNotFoundException as e:
             if allow_empty:
                 return cls.empty_doc(id)

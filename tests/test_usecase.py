@@ -16,7 +16,7 @@ class I18n_Name(PyfireDoc):
 
 class Tag(PyfireDoc):
     name: str
-    i18n_names: Optional[PyfireCollection[I18n_Name]] = PyfireCollection(I18n_Name)
+    i18n_names: PyfireCollection[I18n_Name] = PyfireCollection(I18n_Name)
 
 
 class User(PyfireDoc):
@@ -133,6 +133,13 @@ def test_deep_subcollection(mock_db):
     tag.i18n_names.add(I18n_Name(lang="ja", value="数学"))
 
     assert sorted([n.lang for n in tag.i18n_names]) == sorted(["en", "ja"])
+
+    i18n_names = []
+    for t in book.tags:
+        print(t)
+        for name in t.i18n_names:
+            i18n_names.append(name.value)
+    assert sorted(i18n_names) == sorted(["Mathmatics", "数学"])
 
 
 def test_first(mock_db):
