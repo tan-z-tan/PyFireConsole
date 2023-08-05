@@ -41,7 +41,7 @@ class PyfireCollection(Generic[ModelType]):
 
         for doc in self._collection:
             obj = self.model_class(**doc)
-            obj._parent = self._parent_model
+            obj._parent = self
             yield obj
 
     def first(self) -> ModelType | None:
@@ -115,7 +115,7 @@ class PyfireDoc(BaseModel):
         if self._parent is None:
             return f"{db_name}"
         else:
-            return f"{self._parent.obj_ref_key()}/{db_name}"
+            return self._parent.obj_ref_key()
 
     def model_field_dump(self) -> dict:
         """
@@ -129,8 +129,8 @@ class PyfireDoc(BaseModel):
             attr = getattr(self, name, None)
             if isinstance(attr, PyfireCollection):
                 data.pop(name)
-        if "id" in data:  # TODO when original doc has id field. This should be False?
-            data.pop('id')
+        # if "id" in data:  # TODO when original doc has id field. This should be False?
+        #     data.pop('id')
 
         return data
 
@@ -148,8 +148,8 @@ class PyfireDoc(BaseModel):
         return self
 
     @classmethod
-    def new(cls, data) -> 'PyfireDoc':
-        doc = cls(**data)
+    def new(cls, **kwargs) -> 'PyfireDoc':
+        doc = cls(**kwargs)
         return doc
 
     @classmethod
@@ -164,7 +164,7 @@ class PyfireDoc(BaseModel):
         return cls.model_validate(d)
 
     @classmethod
-    def first(cls) -> 'PyfireDoc':
+    def first(cls) -> Optional['PyfireDoc']:
         coll = PyfireCollection(cls)
         return coll.first()
 

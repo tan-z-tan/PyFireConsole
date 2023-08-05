@@ -40,6 +40,14 @@ class Book(PyfireDoc):
     PyfireDoc.belongs_to(User)  # book.user
 
 
+@pytest.fixture
+def mock_db():
+    db = MockFirestore()
+    FirestoreConnection().set_db(db)
+    yield db
+    db.reset()
+
+
 def test_no_connection():
     """
     When there is no connection, it should raise NotConnectedException
@@ -48,30 +56,26 @@ def test_no_connection():
         Book.find("12345")
 
 
-def test_save_find():
-    # We use mockfirestore to mock firestore operations.
-    # From now on the tests, db is available.
-    FirestoreConnection().set_db(MockFirestore())
-
+def test_save_find(mock_db):
     # case: create a document
-    book = Book.new({
-        "title": "Math",
-        "user_id": "12345",
-        "published_at": datetime.now(),
-        "authors": ["John", "Mary"],
-        "publisher_ref": "publisher/12345",
-    }).save()
+    book = Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
     assert book.__class__ == Book
     assert book.title == "Math"
     assert book.id is not None
 
-    book2 = Book.new({
-        "title": "History",
-        "user_id": "12345",
-        "published_at": datetime.now(),
-        "authors": ["John", "Mary"],
-        "publisher_ref": "publisher/abcde",
-    }).save()
+    book2 = Book.new(
+        title="History",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/abcde",
+    ).save()
     assert book2.__class__ == Book
     assert book2.title == "History"
     assert book2.id is not None
@@ -88,23 +92,23 @@ def test_save_find():
     assert len([b for b in books]) == 1
 
 
-def test_find_not_found():
+def test_find_not_found(mock_db):
     # case: there is no document
     with pytest.raises(DocNotFoundException):
         Book.find("99999")
 
 
-def test_subcollection():
-    book = Book.new({
-        "title": "Math",
-        "user_id": "12345",
-        "published_at": datetime.now(),
-        "authors": ["John", "Mary"],
-        "publisher_ref": "publisher/12345",
-    }).save()
+def test_subcollection(mock_db):
+    book = Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
 
-    book.tags.add(Tag.new({"name": "mathmatics"}))
-    book.tags.add(Tag.new({"name": "textbook"}))
+    book.tags.add(Tag.new(name="mathmatics"))
+    book.tags.add(Tag.new(name="textbook"))
     # book.save()
 
     assert len([t for t in book.tags]) == 2
@@ -114,16 +118,68 @@ def test_subcollection():
     assert "textbook" in tag_names
 
 
-def test_first():
-    user1 = User.new({
-        "name": "John",
-        "email": "",
-    }).save()
-    user2 = User.new({
-        "name": "Mary",
-        "email": "",
-    }).save()
+def test_deep_subcollection(mock_db):
+    book = Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    tag = book.tags.add(Tag.new(name="mathmatics"))
+
+    tag.i18n_names.add(I18n_Name(lang="en", value="Mathmatics"))
+    tag.i18n_names.add(I18n_Name(lang="ja", value="数学"))
+
+    assert sorted([n.lang for n in tag.i18n_names]) == sorted(["en", "ja"])
+
+
+def test_first(mock_db):
+    mock_db = MockFirestore()
+    mock_db.reset()
+
+    user1 = User.new(
+        name="John",
+        email="",
+    ).save()
+    user2 = User.new(
+        name="Mary",
+        email="",
+    ).save()
 
     user = User.first()
 
     assert user.id in [user1.id, user2.id]
+
+
+def test_model_dump(mock_db):
+    book = Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    user = User.new(
+        id=book.user_id,
+        name="John",
+        email="",
+    ).save()
+
+    assert user.model_dump() == {
+        "id": "12345",
+        "name": "John",
+        "email": "",
+    }
+
+    assert book.model_field_dump() == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+    }
