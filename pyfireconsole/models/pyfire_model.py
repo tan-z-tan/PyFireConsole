@@ -2,8 +2,8 @@ from typing import Generic, Iterable, Optional, Type, TypeVar
 
 import inflect
 from pydantic import BaseModel
-from pyfireconsole.queries.get_query import DocNotFoundException
 
+from pyfireconsole.queries.get_query import DocNotFoundException
 from pyfireconsole.queries.query_runner import QueryRunner
 from pyfireconsole.queries.where_clouse import WhereCondition
 

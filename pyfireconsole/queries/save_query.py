@@ -1,4 +1,5 @@
 from typing import Optional
+
 from pyfireconsole.queries.abstract_query import AbstractQuery
 
 

@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 from pyfireconsole.db.connection import conn
 from pyfireconsole.queries.all_query import AllQuery
