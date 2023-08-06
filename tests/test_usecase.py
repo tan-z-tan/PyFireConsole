@@ -20,7 +20,7 @@ class Tag(PyfireDoc):
     i18n_names: PyfireCollection[I18n_Name] = PyfireCollection(I18n_Name)
 
 
-@has_many('Book', "user_id")
+@has_many('Book', "user_id", "my_books")
 class User(PyfireDoc):
     name: str
     email: str
@@ -239,5 +239,5 @@ def test_has_many(mock_db):
         publisher_ref="publisher/12345",
     ).save()
 
-    assert len([b for b in user.books]) == 2
-    assert sorted([b.title for b in user.books]) == sorted(["Math", "History"])
+    assert len([b for b in user.my_books]) == 2
+    assert sorted([b.title for b in user.my_books]) == sorted(["Math", "History"])
