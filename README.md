@@ -19,10 +19,33 @@ pip install pyfireconsole
 ```python
 from datetime import datetime
 from typing import Optional
-from pyfireconsole.models.pyfire_model import PyfireDoc, PyfireCollection, DocumentRef
+from pyfireconsole.models.association import belongs_to
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
 from pyfireconsole.db.connection import FirestoreConnection
 
-# Define your models 
+"""
+We assume that you have a firestore database with the following structure:
+- users Collection
+    - {user_id} Document
+        - name: str
+        - email: str
+- publishers Collection
+    - {publisher_id} Document
+        - name: str
+        - address: str
+- books Collection
+    - {book_id} Document
+        - title: str
+        - user_id: str
+        - published_at: datetime
+        - authors: list[str]
+        - tags: Sub Collection
+            - {tag_id} Document
+                - name: str
+        - publisher_ref: Reference
+"""
+
+
 class User(PyfireDoc):
     name: str
     email: str
@@ -34,10 +57,11 @@ class Publisher(PyfireDoc):
 class Tag(PyfireDoc):
     name: str
 
+
+@belongs_to(User, "user_id")
 class Book(PyfireDoc):
     title: str
     user_id: str
-    PyfireDoc.belongs_to(User)  # Make accessible via book.user
     published_at: datetime
     authors: list[str]
     tags: PyfireCollection[Tag] = PyfireCollection(Tag)
@@ -51,7 +75,7 @@ FirestoreConnection().initialize(project_id="YOUR-PROJECT-ID")
 # FirestoreConnection().initialize(service_account_key_path="./service-account.json", project_id="YOUR-PROJECT-ID")
 
 print("==================== find ====================")
-book = Book.find("12345")  # => Book
+book = Book.find("XlvQHeGi3cODbI4MQpI3")  # => Book
 print(book.model_dump())  # => dict
 print(f"ID: {book.id} | Title: {book.title} | Authors: {book.authors} | Published At: {book.published_at.isoformat()}")
 
@@ -99,31 +123,43 @@ How to setup interactive console:
 ```python
 from datetime import datetime
 from typing import Optional
-from pyfireconsole.models.pyfire_model import PyfireDoc, PyfireCollection, DocumentRef
+from pyfireconsole.models.association import belongs_to, has_many, resolve_pyfire_model_names
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
 from pyfireconsole.db.connection import FirestoreConnection
 from pyfireconsole import PyFireConsole
 
+
+@has_many('Book', "user_id")
 class User(PyfireDoc):
     name: str
     email: str
+
 
 class Publisher(PyfireDoc):
     name: str
     address: Optional[str]
 
+
 class Tag(PyfireDoc):
     name: str
 
+
+@belongs_to(User, "user_id")
 class Book(PyfireDoc):
     title: str
     user_id: str
-    PyfireDoc.belongs_to(User)  # Make accessible via book.user
     published_at: datetime
     authors: list[str]
     tags: PyfireCollection[Tag] = PyfireCollection(Tag)
     publisher_ref: DocumentRef[Publisher]
 
-FirestoreConnection().initialize(project_id="YOUR-PROJECT-ID")
+# Resolve PyfireModel names
+# Call this function when you define your models by using str class name.
+# e.g. @has_many('Book', "user_id")
+resolve_pyfire_model_names(globals())
+
+
+FirestoreConnection().initialize(project_id="YOUR_PROJECT_ID")
 PyFireConsole().run()
 ```
 
@@ -133,6 +169,11 @@ Alternatively, you can define your model files in `app/models/` and initialize t
 ```python
 from pyfireconsole.db.connection import FirestoreConnection
 from pyfireconsole import PyFireConsole
+from pyfireconsole.models.association import resolve_pyfire_model_names
+
+# Resolve PyfireModel names
+resolve_pyfire_model_names(globals())
+
 
 FirestoreConnection().initialize(project_id="YOUR-PROJECT-ID")
 PyFireConsole(model_dir="app/models").run()

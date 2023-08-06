@@ -4,6 +4,10 @@ from google.cloud import firestore
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials  # type: ignore
 
 
+class NotConnectedException(Exception):
+    pass
+
+
 class FirestoreConnection:
     _instance: Optional['FirestoreConnection'] = None
     db: Optional[firestore.Client] = None
@@ -22,9 +26,12 @@ class FirestoreConnection:
             else:
                 self.db = firestore.Client(project=project_id)
 
+    def set_db(self, db):
+        self.db = db
+
     def collection(self, collection_name):
         if self.db is None:
-            raise ValueError("FirestoreConnection is not initialized. Call initialize() first.")
+            raise NotConnectedException("FirestoreConnection is not initialized. Call initialize() first.")
         return self.db.collection(collection_name)
 
 

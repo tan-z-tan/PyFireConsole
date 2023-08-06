@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from pyfireconsole.models.association import belongs_to
 from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
 from pyfireconsole.db.connection import FirestoreConnection
 
@@ -28,7 +29,6 @@ We assume that you have a firestore database with the following structure:
 
 class User(PyfireDoc):
     name: str
-
     email: str
 
 
@@ -41,17 +41,17 @@ class Tag(PyfireDoc):
     name: str
 
 
+@belongs_to(User, "user_id")
 class Book(PyfireDoc):
     title: str
     user_id: str
-    PyfireDoc.belongs_to(User)  # Make accessible via book.user
     published_at: datetime
     authors: list[str]
     tags: PyfireCollection[Tag] = PyfireCollection(Tag)
     publisher_ref: DocumentRef[Publisher]
 
 
-FirestoreConnection().initialize(project_id="YOUR_PROJECT_ID")
+FirestoreConnection().initialize(project_id="promptr-dev-prod")
 # or you can specify service_account_key_path
 # FirestoreConnection().initialize(service_account_key_path="./serviceaccount.json", project_id="YOUR_PROJECT_ID")
 

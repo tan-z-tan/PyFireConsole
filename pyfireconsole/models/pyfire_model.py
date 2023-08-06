@@ -1,8 +1,9 @@
-from typing import Generic, Iterable, Optional, Type, TypeVar
+from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
 
 import inflect
 from pydantic import BaseModel
 
+from pyfireconsole.queries.get_query import DocNotFoundException
 from pyfireconsole.queries.query_runner import QueryRunner
 from pyfireconsole.queries.where_clouse import WhereCondition
 
@@ -39,9 +40,16 @@ class PyfireCollection(Generic[ModelType]):
             self._collection = QueryRunner(self.obj_ref_key()).all()
 
         for doc in self._collection:
+            doc = self.model_class.model_field_load(doc)
             obj = self.model_class(**doc)
-            obj._parent = self._parent_model
+            obj._parent = self
             yield obj
+
+    def first(self) -> ModelType | None:
+        try:
+            return next(iter(self))
+        except StopIteration:
+            return None
 
     def where(self, field: str, operator: str, value: str) -> 'PyfireCollection[ModelType]':
         coll = PyfireCollection(self.model_class)
@@ -50,6 +58,20 @@ class PyfireCollection(Generic[ModelType]):
             coll.set_parent(self._parent_model)
 
         return coll
+
+    def add(self, entity: ModelType) -> ModelType:
+        assert isinstance(entity, self.model_class)
+
+        entity._parent = self
+        data = entity.model_field_dump()
+        if entity.id is None:
+            _id = QueryRunner(self.obj_collection_name()).create(data)
+            if _id:
+                entity.id = _id
+        else:
+            raise ValueError("Could not save document")
+
+        return entity
 
     def __str__(self) -> str:
         if self._parent_model is None:
@@ -68,7 +90,7 @@ class PyfireDoc(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    id: str  # Firestore document id
+    id: Optional[str] = None  # Firestore document id
     _parent: Optional[PyfireCollection] = None  # when a model is a subcollection, this is the parent model
 
     def __init__(self, **data):
@@ -86,25 +108,80 @@ class PyfireDoc(BaseModel):
 
     def obj_ref_key(self) -> str:
         """ Represents the key of firestore entity """
+        return f"{self.obj_collection_name()}/{self.id}"
+
+    def obj_collection_name(self) -> str:
+        """ Represents the name of firestore collection """
         db_name = self.__class__.collection_name()
         if self._parent is None:
-            return f"{db_name}/{self.id}"
+            return f"{db_name}"
         else:
-            return f"{self._parent.obj_ref_key()}/{db_name}/{self.id}"
+            return self._parent.obj_ref_key()
 
-    def save(self) -> None:
-        raise NotImplementedError
+    def model_field_dump(self) -> dict:
+        """
+        Returns the model fields as dict. This is used for saving the model to firestore.
+        Does not include collection fields.
+        """
+        data = self.model_dump()
+
+        for name, _ in self.__annotations__.items():
+            attr = getattr(self, name, None)
+            if isinstance(attr, PyfireCollection):
+                data.pop(name)
+        # if "id" in data:  # TODO when original doc has id field. This should be False?
+        #     data.pop('id')
+
+        return data
+
+    @classmethod
+    def model_field_load(cls, data: dict) -> dict:
+        """
+        Filters out collection fields from the data dict.
+        """
+        for name, klass in cls.__annotations__.items():
+            if name not in data:
+                continue
+            if get_origin(klass) == PyfireCollection:
+                data.pop(name)
+        return data
+
+    def save(self) -> 'PyfireDoc':
+        data = self.model_field_dump()
+        if self.id is None:
+            _id = QueryRunner(self.obj_collection_name()).create(data)
+            if _id:
+                self.id = _id
+        else:
+            _id = QueryRunner(self.obj_collection_name()).save(self.id, data)
+
+        if _id is None:
+            raise ValueError("Could not save document")
+        return self
+
+    @classmethod
+    def new(cls, **kwargs) -> 'PyfireDoc':
+        doc = cls(**kwargs)
+        return doc
 
     @classmethod
     def find(cls, id: str, allow_empty: bool = False) -> 'PyfireDoc':
-        d = QueryRunner(cls.collection_name()).get(id)
-
-        if d is None:
+        try:
+            d = QueryRunner(cls.collection_name()).get(id)
+            if d is None:
+                raise DocNotFoundException(f"Document {cls.collection_name()}/{id} not found")
+            d = cls.model_field_load(d)
+        except DocNotFoundException as e:
             if allow_empty:
                 return cls.empty_doc(id)
             else:
-                raise ValueError(f"Could not find {cls.__name__} with id {id}")
+                raise e
         return cls.model_validate(d)
+
+    @classmethod
+    def first(cls) -> Optional['PyfireDoc']:
+        coll = PyfireCollection(cls)
+        return coll.first()
 
     @classmethod
     def empty_doc(cls, id) -> 'PyfireDoc':
@@ -124,19 +201,3 @@ class PyfireDoc(BaseModel):
         Override this method to change the name of the collection in Firestore
         """
         return inflect.engine().plural(cls.__name__).lower()
-
-    @classmethod
-    def belongs_to(cls, model_class: Type[ModelType], db_field: Optional[str] = None, attr_name: Optional[str] = None):
-        def getter_method(self):
-            model_id = getattr(self, db_field)
-            if model_id:
-                return model_class.find(model_id)
-            else:
-                return None
-
-        db_field = db_field or f"{model_class.__name__.lower()}_id"
-        attr_name = attr_name or model_class.__name__.lower()
-        setattr(cls, model_class.__name__.lower(), property(getter_method))
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({super().__str__()})"
