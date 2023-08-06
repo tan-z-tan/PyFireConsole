@@ -3,6 +3,7 @@ from typing import Optional
 
 import pytest
 from pyfireconsole.db.connection import FirestoreConnection, NotConnectedException
+from pyfireconsole.models.association import belongs_to, has_many, resolve_pyfire_model_names
 from pyfireconsole.models.pyfire_model import DocumentRef, PyfireCollection, PyfireDoc
 from mockfirestore import MockFirestore
 
@@ -19,6 +20,7 @@ class Tag(PyfireDoc):
     i18n_names: PyfireCollection[I18n_Name] = PyfireCollection(I18n_Name)
 
 
+@has_many('Book', "user_id")
 class User(PyfireDoc):
     name: str
     email: str
@@ -29,6 +31,7 @@ class Publisher(PyfireDoc):
     address: Optional[str] = None
 
 
+@belongs_to(User, "user_id")
 class Book(PyfireDoc):
     title: str
     user_id: str
@@ -37,8 +40,12 @@ class Book(PyfireDoc):
     edit_info: Optional[dict[str, object]] = None
     tags: PyfireCollection[Tag] = PyfireCollection(Tag)
     publisher_ref: DocumentRef[Publisher] | str
-    PyfireDoc.belongs_to(User)  # book.user
 
+
+resolve_pyfire_model_names(globals())
+
+
+# ================== test ====================
 
 @pytest.fixture
 def mock_db():
@@ -190,3 +197,47 @@ def test_model_dump(mock_db):
         "edit_info": None,
         "publisher_ref": "publisher/12345",
     }
+
+
+def test_belongs_to(mock_db):
+    user = User.new(
+        name="John",
+        email="",
+    ).save()
+
+    book = Book.new(
+        title="Math",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert book.user.name == "John"
+    assert book.user.email == ""
+
+
+def test_has_many(mock_db):
+    user = User.new(
+        name="John",
+        email="",
+    ).save()
+
+    Book.new(
+        title="Math",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    Book.new(
+        title="History",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert len([b for b in user.books]) == 2
+    assert sorted([b.title for b in user.books]) == sorted(["Math", "History"])

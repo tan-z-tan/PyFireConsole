@@ -201,19 +201,3 @@ class PyfireDoc(BaseModel):
         Override this method to change the name of the collection in Firestore
         """
         return inflect.engine().plural(cls.__name__).lower()
-
-    @classmethod
-    def belongs_to(cls, model_class: Type[ModelType], db_field: Optional[str] = None, attr_name: Optional[str] = None):
-        def getter_method(self):
-            model_id = getattr(self, db_field)
-            if model_id:
-                return model_class.find(model_id)
-            else:
-                return None
-
-        db_field = db_field or f"{model_class.__name__.lower()}_id"
-        attr_name = attr_name or model_class.__name__.lower()
-        setattr(cls, model_class.__name__.lower(), property(getter_method))
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({super().__str__()})"
