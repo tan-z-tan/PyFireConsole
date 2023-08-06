@@ -13,12 +13,15 @@ inflect = "^7.0.0"
 pydantic = "^2.1.1"
 ipython = "^8.14.0"
 
-
 [tool.poetry.group.dev.dependencies]
 wheel = "^0.41.0"
 twine = "^4.0.2"
 pytest = "^7.4.0"
 mock-firestore = "^0.11.0"
+
+[virtualenvs]
+create = true
+in-project = true
 
 [build-system]
 requires = ["poetry-core"]
