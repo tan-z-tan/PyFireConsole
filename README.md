@@ -1,3 +1,5 @@
+[![Python package](https://github.com/tan-z-tan/PyFireConsole/actions/workflows/test.yml/badge.svg)](https://github.com/tan-z-tan/PyFireConsole/actions/workflows/test.yml)
+
 <h1 style="text-align: center;">
   <img src="https://raw.githubusercontent.com/tan-z-tan/pyfireconsole/main/logo.png" alt="PyFireConsole">
 </h1>
