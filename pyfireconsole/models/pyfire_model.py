@@ -1,4 +1,5 @@
 from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
+from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 import inflect
 from pydantic import BaseModel
@@ -123,12 +124,14 @@ class PyfireDoc(BaseModel):
         Returns the model fields as dict. This is used for saving the model to firestore.
         Does not include collection fields.
         """
-        data = self.model_dump()
+        data = super().model_dump()
 
         for name, _ in self.__annotations__.items():
             attr = getattr(self, name, None)
             if isinstance(attr, PyfireCollection):
                 data.pop(name)
+            if isinstance(attr, DatetimeWithNanoseconds):
+                data[name] = attr.rfc3339()
         # if "id" in data:  # TODO when original doc has id field. This should be False?
         #     data.pop('id')
 
@@ -193,6 +196,11 @@ class PyfireDoc(BaseModel):
     def where(cls, field: str, operator: str, value: str) -> PyfireCollection['PyfireDoc']:
         coll = PyfireCollection(cls)
         coll._where_cond = WhereCondition(field, operator, value)
+        return coll
+
+    @classmethod
+    def all(cls) -> PyfireCollection['PyfireDoc']:
+        coll = PyfireCollection(cls)
         return coll
 
     @classmethod
