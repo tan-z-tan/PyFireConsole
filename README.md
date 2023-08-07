@@ -18,15 +18,107 @@ pip install pyfireconsole
 ```
 
 ## Getting Started
+### Connect to Firestore
 ```python
-from datetime import datetime
-from typing import Optional
-from pyfireconsole.models.association import belongs_to
-from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
-from pyfireconsole.db.connection import FirestoreConnection
+# Initialize FirestoreConnection using your default credentials of gcloud. (use `gcloud auth application-default login` or set GOOGLE_APPLICATION_CREDENTIALS)
+FirestoreConnection().initialize(project_id="YOUR-PROJECT-ID")
 
-"""
+# Or you can specify service_account_key_path
+FirestoreConnection().initialize(service_account_key_path="./service-account.json", project_id="YOUR-PROJECT-ID")
+```
+
+### Find a document by id
+```python
+from pyfireconsole.models.pyfire_model import PyfireDoc
+
+class User(PyfireDoc):
+    name: str
+    email: str
+    role: str = "user"
+
+# Find a document by id
+user = User.find("XXX")
+#=> User[users/XXX](id='XXX', name='John', email='john@example.com', role='user')
+
+# Nested document can be accessed by path
+user = User.find("companies/ZZZ/users/YYY")
+#=> User[companies/ZZZ/users/YYY](id='YYY', name='John', email='john@example.com', role='user')
+```
+
+### Where query
+You can use `where` method to query documents.
+```python
+admin_users = User.where("role", "==", "admin")
+#=> PyfireCollection<User>[users]
+
+# admin_user is iterable
+for user in admin_users:
+    print(user)
+    #=> User[users/YYYYYYYYYY](id='YYYYYYYYYY', name='Mary', email='mary@example.com', role='admin')
+```
+
+### Sub collection
+You can define sub collection of a document by using `PyfireCollection` class.
+```python
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
+
+# Tag is sub collection of Book
+class Tag(PyfireDoc):
+    name: str
+
+class Book(PyfireDoc):
+    title: str
+    user_id: str
+    published_at: datetime
+    tags: PyfireCollection[Tag] = PyfireCollection(Tag)  # Specify sub collection type
+
+
+book = Book.find("XXXX")
+for tag in book.tags:
+    print(tag)
+    #=> Tag[books/XXXX/tags/YYYY](id='YYYY', name='Python')
+```
+
+### has_many, belongs_to
+You can define data associations by using `has_many` and `belongs_to` decorators.
+
+Now `book.user` returns `User` object, and `user.books` returns `PyfireCollection[Book]` object.
+
+```python
+from pyfireconsole.models.association import belongs_to, has_many, resolve_pyfire_model_names
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
+
+
+@has_many('Book', db_field="user_id", attr_name="my_books")
+class User(PyfireDoc):
+    name: str
+    email: str
+
+class Tag(PyfireDoc):
+    name: str
+
+@belongs_to(User, "user_id")
+class Book(PyfireDoc):
+    title: str
+    user_id: str
+    published_at: datetime
+    tags: PyfireCollection[Tag] = PyfireCollection(Tag)
+
+# call this to resolve model names (this is because of python's circular import problem)
+resolve_pyfire_model_names(globals())
+
+user = User.find("YYYY")
+user.my_books
+=> PyfireCollection[Book][books]
+
+user.my_books.first.user
+=> User[users/XXXX](id='XXXX', name='John', email="john@example.com")
+```
+
+### Example
 We assume that you have a firestore database with the following structure:
+
+```
 - users Collection
     - {user_id} Document
         - name: str
@@ -45,16 +137,27 @@ We assume that you have a firestore database with the following structure:
             - {tag_id} Document
                 - name: str
         - publisher_ref: Reference
-"""
+```
+
+```python
+from datetime import datetime
+from typing import Optional
+from pyfireconsole.models.association import belongs_to
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
+from pyfireconsole.db.connection import FirestoreConnection
 
 
+# Define models
+@has_many('Book', "user_id")
 class User(PyfireDoc):
     name: str
     email: str
 
+
 class Publisher(PyfireDoc):
     name: str
     address: Optional[str]
+
 
 class Tag(PyfireDoc):
     name: str
@@ -91,29 +194,10 @@ print(book.publisher_ref.path)  # => str (So far, we can't access publisher_ref.
 
 print("==================== where ====================")
 print(Book.where("title", "==", "test"))  # => Book[] Make sure to create index in firestore for compound queries
-```
 
-We assume that you have a firestore database with the following structure:
-```
-=== Firestore Database ===
-- users Collection
-    - {user_id} Document
-        - name: str
-        - email: str
-- publishers Collection
-    - {publisher_id} Document
-        - name: str
-        - address: str
-- books Collection
-    - {book_id} Document
-        - title: str
-        - user_id: str
-        - published_at: datetime
-        - authors: list[str]
-        - tags: Sub Collection
-            - {tag_id} Document
-                - name: str
-        - publisher_ref: Reference
+print("==================== has_many ====================")
+print(book.tags)  # => PyfireCollection[Tag]
+print(book.tags.first)  # => Tag
 ```
 
 ## Interactive Console
@@ -156,8 +240,7 @@ class Book(PyfireDoc):
     publisher_ref: DocumentRef[Publisher]
 
 # Resolve PyfireModel names
-# Call this function when you define your models by using str class name.
-# e.g. @has_many('Book', "user_id")
+# Call this function when you define your models by using str class name. e.g. @has_many('Book', "user_id")
 resolve_pyfire_model_names(globals())
 
 
