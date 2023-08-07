@@ -188,7 +188,7 @@ def test_model_dump(mock_db):
         "email": "",
     }
 
-    assert book.model_field_dump() == {
+    assert book.doc_field_dump() == {
         "id": book.id,
         "title": "Math",
         "user_id": "12345",

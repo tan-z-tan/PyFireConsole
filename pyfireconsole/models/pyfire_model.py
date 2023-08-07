@@ -41,7 +41,7 @@ class PyfireCollection(Generic[ModelType]):
             self._collection = QueryRunner(self.obj_ref_key()).all()
 
         for doc in self._collection:
-            doc = self.model_class.model_field_load(doc)
+            doc = self.model_class.doc_field_load(doc)
             obj = self.model_class(**doc)
             obj._parent = self
             yield obj
@@ -64,7 +64,7 @@ class PyfireCollection(Generic[ModelType]):
         assert isinstance(entity, self.model_class)
 
         entity._parent = self
-        data = entity.model_field_dump()
+        data = entity.doc_field_dump()
         if entity.id is None:
             _id = QueryRunner(self.obj_collection_name()).create(data)
             if _id:
@@ -121,7 +121,7 @@ class PyfireDoc(BaseModel):
         else:
             return self._parent.obj_ref_key()
 
-    def model_field_dump(self) -> dict:
+    def doc_field_dump(self) -> dict:
         """
         Returns the model fields as dict. This is used for saving the model to firestore.
         Does not include collection fields.
@@ -140,9 +140,9 @@ class PyfireDoc(BaseModel):
         return data
 
     @classmethod
-    def model_field_load(cls, data: dict) -> dict:
+    def doc_field_load(cls, data: dict) -> dict:
         """
-        Filters out collection fields from the data dict.
+        Filters out non document fields from the data dict.
         """
         for name, klass in cls.__annotations__.items():
             if name not in data:
@@ -152,7 +152,7 @@ class PyfireDoc(BaseModel):
         return data
 
     def save(self) -> 'PyfireDoc':
-        data = self.model_field_dump()
+        data = self.doc_field_dump()
         if self.id is None:
             _id = QueryRunner(self.obj_collection_name()).create(data)
             if _id:
@@ -181,7 +181,7 @@ class PyfireDoc(BaseModel):
             d = QueryRunner(collection_name).get(id)
             if d is None:
                 raise DocNotFoundException(f"Document {collection_name}/{id} not found")
-            d = cls.model_field_load(d)
+            d = cls.doc_field_load(d)
         except DocNotFoundException as e:
             if allow_empty:
                 return cls.empty_doc(id)
