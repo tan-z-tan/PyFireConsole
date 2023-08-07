@@ -172,11 +172,17 @@ class PyfireDoc(BaseModel):
         return doc
 
     @classmethod
-    def find(cls, id: str, allow_empty: bool = False) -> 'PyfireDoc':
+    def find(cls, path: str, allow_empty: bool = False) -> 'PyfireDoc':
+        if path.find('/') == -1:
+            collection_name = cls.collection_name()
+            id = path
+        else:
+            collection_name, id = path.rsplit('/', 1)
+
         try:
-            d = QueryRunner(cls.collection_name()).get(id)
+            d = QueryRunner(collection_name).get(id)
             if d is None:
-                raise DocNotFoundException(f"Document {cls.collection_name()}/{id} not found")
+                raise DocNotFoundException(f"Document {collection_name}/{id} not found")
             d = cls.model_field_load(d)
         except DocNotFoundException as e:
             if allow_empty:
