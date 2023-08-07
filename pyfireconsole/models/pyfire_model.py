@@ -75,9 +75,7 @@ class PyfireCollection(Generic[ModelType]):
         return entity
 
     def __str__(self) -> str:
-        if self._parent_model is None:
-            return f"{self.__class__.__name__}[{self.model_class.__name__}]"
-        return f"{self.__class__.__name__}[{self.model_class.__name__}](parent={self._parent_model.__class__.__name__})"
+        return f"{self.__class__.__name__}<{self.model_class.__name__}>[{self.obj_ref_key()}]"
 
 
 class DocumentRef(BaseModel, Generic[ModelType]):
@@ -219,3 +217,6 @@ class PyfireDoc(BaseModel):
         Override this method to change the name of the collection in Firestore
         """
         return inflect.engine().plural(cls.__name__).lower()
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}[{self.obj_ref_key()}]({super.__str__(self).split('(', 1)[1]}"
