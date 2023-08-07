@@ -83,8 +83,12 @@ class PyfireCollection(Generic[ModelType]):
 class DocumentRef(BaseModel, Generic[ModelType]):
     path: str
 
-    # TODO: Implement reference class so that we can do this like this:
-    # book.user_ref.get() => User object
+    def id(self) -> str:
+        return self.path.split('/')[-1]
+
+    def get(self, model_class: Type[ModelType]) -> 'PyfireDoc':
+        print(self.path)
+        return model_class.find(self.id())
 
 
 class PyfireDoc(BaseModel):
