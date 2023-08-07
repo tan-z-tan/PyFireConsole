@@ -19,6 +19,7 @@ pip install pyfireconsole
 
 ## Getting Started
 ### Connect to Firestore
+First of all, you need to initialize `FirestoreConnection` with your project id.
 ```python
 # Initialize FirestoreConnection using your default credentials of gcloud. (use `gcloud auth application-default login` or set GOOGLE_APPLICATION_CREDENTIALS)
 FirestoreConnection().initialize(project_id="YOUR-PROJECT-ID")
@@ -28,6 +29,7 @@ FirestoreConnection().initialize(service_account_key_path="./service-account.jso
 ```
 
 ### Find a document by id
+Like Rails, you can define your model class by inheriting `PyfireDoc` class.
 ```python
 from pyfireconsole.models.pyfire_model import PyfireDoc
 
@@ -148,6 +150,7 @@ from pyfireconsole.db.connection import FirestoreConnection
 
 
 # Define models
+# PyfireDoc is a subclass of Pydantic(2.x) BaseModel. You can use Pydantic's features.
 @has_many('Book', "user_id")
 class User(PyfireDoc):
     name: str
