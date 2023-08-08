@@ -123,11 +123,26 @@ class PyfireCollection(Generic[ModelType]):
 class DocumentRef(BaseModel, Generic[ModelType]):
     path: str
 
+    @property
     def id(self) -> str:
+        """
+        Get the ID of the document from the path.
+
+        Returns:
+            str: The ID of the document.
+        """
         return self.path.split('/')[-1]
 
     def get(self, model_class: Type[ModelType]) -> 'PyfireDoc':
-        print(self.path)
+        """
+        Retrieve the document corresponding to the current reference.
+
+        Args:
+            model_class (Type[ModelType]): The class of the model to retrieve.
+
+        Returns:
+            PyfireDoc: The retrieved document.
+        """
         return model_class.find(self.id())
 
 
