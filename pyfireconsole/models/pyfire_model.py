@@ -21,13 +21,23 @@ class PyfireCollection(Generic[ModelType]):
         self.model_class = model_class
 
     def obj_ref_key(self) -> str:
-        """ Represents the key of firestore entity """
+        """
+        Represents the key of firestore entity
+        Returns:
+            str: The Firestore entity key.
+        """
         return self.obj_collection_name()
 
     def set_parent(self, parent_model: 'PyfireDoc'):
         self._parent_model = parent_model
 
     def obj_collection_name(self) -> str:
+        """
+        Get the Firestore collection name for the object.
+
+        Returns:
+            str: The Firestore collection name.
+        """
         leaf_collection_name = self.model_class.collection_name()
         if self._parent_model is None:
             return leaf_collection_name  # e.g. "users"
@@ -35,24 +45,47 @@ class PyfireCollection(Generic[ModelType]):
             return f"{self._parent_model.obj_ref_key()}/{leaf_collection_name}"  # e.g. "users/123/books"
 
     def __iter__(self):
+        """
+        Iterator to loop through the collection.
+
+        Yields:
+            ModelType: The current document in the collection iteration.
+        """
         if self._where_cond is not None:
             self._collection = QueryRunner(self.obj_ref_key()).where(self._where_cond.field, self._where_cond.operator, self._where_cond.value)
         else:
             self._collection = QueryRunner(self.obj_ref_key()).all()
 
         for doc in self._collection:
-            doc = self.model_class.doc_field_load(doc)
+            doc = self.model_class._doc_field_load(doc)
             obj = self.model_class(**doc)
             obj._parent = self
             yield obj
 
     def first(self) -> ModelType | None:
+        """
+        Get the first document in the collection.
+
+        Returns:
+            ModelType or None: The first document or None if the collection is empty.
+        """
         try:
             return next(iter(self))
         except StopIteration:
             return None
 
     def where(self, field: str, operator: str, value: str) -> 'PyfireCollection[ModelType]':
+        """
+        Filter the collection based on the given condition.
+
+        Args:
+            field (str): The field name to apply the filter on.
+            operator (str): The comparison operator (e.g., '==', '>', '<').
+            value (str): The value to compare against.
+
+        Returns:
+            PyfireCollection[ModelType]: A new PyfireCollection instance with the applied filter.
+        """
         coll = PyfireCollection(self.model_class)
         coll._where_cond = WhereCondition(field, operator, value)
         if self._parent_model is not None:
@@ -61,6 +94,15 @@ class PyfireCollection(Generic[ModelType]):
         return coll
 
     def add(self, entity: ModelType) -> ModelType:
+        """
+        Add a new document to the collection.
+
+        Args:
+            entity (ModelType): The document to be added.
+
+        Returns:
+            ModelType: The added document.
+        """
         assert isinstance(entity, self.model_class)
 
         entity._parent = self
@@ -110,11 +152,21 @@ class PyfireDoc(BaseModel):
                 pass
 
     def obj_ref_key(self) -> str:
-        """ Represents the key of firestore entity """
+        """
+        Represents the key of firestore entity
+
+        Returns:
+            str: The Firestore entity key.
+        """
         return f"{self.obj_collection_name()}/{self.id}"
 
     def obj_collection_name(self) -> str:
-        """ Represents the name of firestore collection """
+        """
+        Get the Firestore collection name for the document.
+
+        Returns:
+            str: The Firestore collection name.
+        """
         db_name = self.__class__.collection_name()
         if self._parent is None:
             return f"{db_name}"
@@ -140,7 +192,7 @@ class PyfireDoc(BaseModel):
         return data
 
     @classmethod
-    def doc_field_load(cls, data: dict) -> dict:
+    def _doc_field_load(cls, data: dict) -> dict:
         """
         Filters out non document fields from the data dict.
         """
@@ -152,6 +204,12 @@ class PyfireDoc(BaseModel):
         return data
 
     def save(self) -> 'PyfireDoc':
+        """
+        Save or update the current document in Firestore.
+
+        Returns:
+            PyfireDoc: The saved document.
+        """
         data = self.doc_field_dump()
         if self.id is None:
             _id = QueryRunner(self.obj_collection_name()).create(data)
@@ -164,13 +222,69 @@ class PyfireDoc(BaseModel):
             raise ValueError("Could not save document")
         return self
 
+    def delete(self) -> bool:
+        """
+        Deletes the current document from Firestore.
+        Returns True if deletion is successful, False otherwise.
+        """
+        if self.id is None:
+            raise ValueError("Document ID is not set.")
+
+        result = QueryRunner(self.obj_collection_name()).delete(self.id)
+        return result
+
+    def update(self, **kwargs) -> 'PyfireDoc':
+        """
+        Updates the current document with provided fields.
+        """
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        self.save()
+        return self
+
+    @classmethod
+    def count(cls) -> int:
+        """
+        Returns the count of documents in the collection.
+        This only works for top level collections.
+        """
+        return len(QueryRunner(cls.collection_name()).all())
+
+    @classmethod
+    def exists(cls, id: str) -> bool:
+        """
+        Checks if a document exists by its ID.
+        """
+        try:
+            cls.find(id)
+            return True
+        except DocNotFoundException:
+            return False
+
     @classmethod
     def new(cls, **kwargs) -> 'PyfireDoc':
+        """
+        Create a new instance of the document without saving it to Firestore.
+
+        Returns:
+            PyfireDoc: The new document instance.
+        """
         doc = cls(**kwargs)
         return doc
 
     @classmethod
     def find(cls, path: str, allow_empty: bool = False) -> 'PyfireDoc':
+        """
+        Find a document by its path or ID.
+
+        Args:
+            path (str): The document's path or ID.
+            allow_empty (bool, optional): If True, returns an empty document if not found. Defaults to False.
+
+        Returns:
+            PyfireDoc: The found document.
+        """
         if path.find('/') == -1:
             collection_name = cls.collection_name()
             id = path
@@ -181,33 +295,66 @@ class PyfireDoc(BaseModel):
             d = QueryRunner(collection_name).get(id)
             if d is None:
                 raise DocNotFoundException(f"Document {collection_name}/{id} not found")
-            d = cls.doc_field_load(d)
+            d = cls._doc_field_load(d)
         except DocNotFoundException as e:
             if allow_empty:
-                return cls.empty_doc(id)
+                return cls._empty_doc(id)
             else:
                 raise e
         return cls.model_validate(d)
 
     @classmethod
     def first(cls) -> Optional['PyfireDoc']:
+        """
+        Get the first document in the collection.
+
+        Returns:
+            PyfireDoc or None: The first document or None if the collection is empty.
+        """
         coll = PyfireCollection(cls)
         return coll.first()
 
     @classmethod
-    def empty_doc(cls, id) -> 'PyfireDoc':
+    def _empty_doc(cls, id) -> 'PyfireDoc':
+        """
+        Create an empty document with the given ID.
+
+        Args:
+            id (str): The ID for the empty document.
+
+        Returns:
+            PyfireDoc: The empty document.
+        """
         doc = cls.model_construct(id=id)
         doc._setup_collections()
         return doc
 
     @classmethod
     def where(cls, field: str, operator: str, value: str) -> PyfireCollection['PyfireDoc']:
+        """
+        Filter the documents based on the given condition.
+
+        Args:
+            field (str): The field name to apply the filter on.
+            operator (str): The comparison operator (e.g., '==', '>', '<').
+            value (str): The value to compare against.
+
+        Returns:
+            PyfireCollection[PyfireDoc]: A PyfireCollection instance with the applied filter.
+        """
         coll = PyfireCollection(cls)
         coll._where_cond = WhereCondition(field, operator, value)
         return coll
 
     @classmethod
     def all(cls) -> PyfireCollection['PyfireDoc']:
+        """
+        Get all documents in the collection.
+        Be careful when using this method as it can be very slow for large collections.
+
+        Returns:
+            PyfireCollection[PyfireDoc]: A PyfireCollection instance containing all documents.
+        """
         coll = PyfireCollection(cls)
         return coll
 
@@ -215,6 +362,9 @@ class PyfireDoc(BaseModel):
     def collection_name(cls) -> str:
         """
         Override this method to change the name of the collection in Firestore
+
+        Returns:
+            str: The Firestore collection name.
         """
         return inflect.engine().plural(cls.__name__).lower()
 

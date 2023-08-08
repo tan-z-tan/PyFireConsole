@@ -26,3 +26,6 @@ class QueryRunner:
 
     def create(self, data: dict) -> str | None:
         return SaveQuery(self.collection_key, None, data).set_conn(self.conn).exec()
+
+    def delete(self, id: str) -> None:
+        raise DeleteQuery(self.collection_key, id).set_conn(self.conn).exec()
