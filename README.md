@@ -7,6 +7,8 @@
 ## Introduction
 Inspired by Rails console, PyFireConsole provides a seamless interface to Google's Firestore in Python, simplifying tasks such as connection, ORM, and data associations. It makes managing Firestore a breeze.
 
+<img src="https://github.com/tan-z-tan/PyFireConsole/assets/2078683/1e4e51a0-ac3f-4f75-96f3-6cf72fa627b6"></img>
+
 ## Features
 - Model Definition and ORM: Define your Firestore data models within Python and use object-relational mapping (ORM) for easier data manipulation and querying.
 - Data Associations: Effortlessly manage relationships between your Firestore data models.
