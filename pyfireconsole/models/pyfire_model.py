@@ -143,7 +143,7 @@ class DocumentRef(BaseModel, Generic[ModelType]):
         Returns:
             PyfireDoc: The retrieved document.
         """
-        return model_class.find(self.id())
+        return model_class.find(self.id)
 
 
 class PyfireDoc(BaseModel):
