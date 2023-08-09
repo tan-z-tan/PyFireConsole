@@ -1,8 +1,7 @@
-import json
 from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
-from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
 import inflect
+from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from pydantic import BaseModel
 
 from pyfireconsole.queries.get_query import DocNotFoundException
