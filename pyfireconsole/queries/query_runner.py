@@ -2,6 +2,7 @@ from typing import Dict
 
 from pyfireconsole.db.connection import conn
 from pyfireconsole.queries.all_query import AllQuery
+from pyfireconsole.queries.delete_query import DeleteQuery
 from pyfireconsole.queries.get_query import GetQuery
 from pyfireconsole.queries.save_query import SaveQuery
 from pyfireconsole.queries.where_query import WhereQuery
@@ -28,4 +29,4 @@ class QueryRunner:
         return SaveQuery(self.collection_key, None, data).set_conn(self.conn).exec()
 
     def delete(self, id: str) -> None:
-        raise DeleteQuery(self.collection_key, id).set_conn(self.conn).exec()
+        return DeleteQuery(self.collection_key, id).set_conn(self.conn).exec()

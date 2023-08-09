@@ -285,3 +285,34 @@ def test_has_many(mock_db):
 
     assert len([b for b in user.my_books]) == 2
     assert sorted([b.title for b in user.my_books]) == sorted(["Math", "History"])
+
+
+def test_delete(mock_db):
+    user = User.new(
+        name="John",
+        email="",
+    ).save()
+
+    book1 = Book.new(
+        title="Math",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    _book2 = Book.new(
+        title="History",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert len([b for b in user.my_books]) == 2
+    book1.delete()
+    assert len([b for b in user.my_books]) == 1
+    assert user.my_books.first().title == "History"
+
+    with pytest.raises(DocNotFoundException):
+        Book.find(book1.id)
