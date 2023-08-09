@@ -167,7 +167,7 @@ def test_first(mock_db):
     assert user.id in [user1.id, user2.id]
 
 
-def test_model_dump(mock_db):
+def test_as_json(mock_db):
     book = Book.new(
         title="Math",
         user_id="12345",
@@ -175,20 +175,20 @@ def test_model_dump(mock_db):
         authors=["John", "Mary"],
         publisher_ref="publisher/12345",
     ).save()
-
+    tag = book.tags.add(Tag.new(name="mathmatics"))
     user = User.new(
         id=book.user_id,
         name="John",
         email="",
     ).save()
 
-    assert user.model_dump() == {
+    assert user.as_json() == {
         "id": "12345",
         "name": "John",
         "email": "",
     }
 
-    assert book.doc_field_dump() == {
+    assert book.as_json() == {
         "id": book.id,
         "title": "Math",
         "user_id": "12345",
@@ -197,6 +197,50 @@ def test_model_dump(mock_db):
         "edit_info": None,
         "publisher_ref": "publisher/12345",
     }
+
+    assert book.as_json(include=['user']) == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+        "user": {"id": user.id, "name": "John", "email": ""},
+    }
+
+    assert book.as_json(excepts=['id', 'published_at', 'edit_info']) == {
+        "title": "Math",
+        "user_id": "12345",
+        "authors": ["John", "Mary"],
+        "publisher_ref": "publisher/12345",
+    }
+
+    assert book.as_json(recursive=True) == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+        "tags": [{"id": tag.id, "name": "mathmatics", "i18n_names": []}],
+    }
+
+    assert book.as_json(recursive=True, include=["user"]) == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+        "tags": [{"id": tag.id, "name": "mathmatics", "i18n_names": []}],
+        "user": {"id": user.id, "name": "John", "email": ""},
+    }
+
+    with pytest.raises(AttributeError):
+        book.as_json(recursive=True, include=["invalid_field"])
 
 
 def test_belongs_to(mock_db):
