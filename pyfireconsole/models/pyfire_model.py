@@ -1,3 +1,4 @@
+import json
 from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 
@@ -62,6 +63,19 @@ class PyfireCollection(Generic[ModelType]):
             obj._parent = self
             yield obj
 
+    def as_json(self, recursive: bool = False, include: list[str] = [], excepts: list[str] = []) -> list[dict]:
+        """
+        Dump the collection to a list of dictionaries.
+
+        Args:
+            recursive (bool): Whether to dump the collection recursively.
+            include (list[str]): A list of fields to include in the dump.
+
+        Returns:
+            list[dict]: The collection as a list of dictionaries.
+        """
+        return [obj.as_json(recursive, include, excepts) for obj in self]
+
     def first(self) -> ModelType | None:
         """
         Get the first document in the collection.
@@ -106,7 +120,7 @@ class PyfireCollection(Generic[ModelType]):
         assert isinstance(entity, self.model_class)
 
         entity._parent = self
-        data = entity.doc_field_dump()
+        data = entity.as_json(recursive=False)
         if entity.id is None:
             _id = QueryRunner(self.obj_collection_name()).create(data)
             if _id:
@@ -188,21 +202,47 @@ class PyfireDoc(BaseModel):
         else:
             return self._parent.obj_ref_key()
 
-    def doc_field_dump(self) -> dict:
+    def as_json(self, recursive: bool = False, include: list[str] = [], excepts: list[str] = []) -> dict:
         """
         Returns the model fields as dict. This is used for saving the model to firestore.
-        Does not include collection fields.
+
+        Args:
+            recursive (bool, optional): Whether to recursively dump the subcollections. Defaults to True.
+            include (list[str], optional): A list of fields to include in the dump. Defaults to [].
+            excepts (list[str], optional): A list of fields to exclude from the dump. Defaults to [].
+
+        Returns:
+            dict: The model fields as dict.
         """
         data = super().model_dump()
 
-        for name, _ in self.__annotations__.items():
+        for name, _klass in self.__annotations__.items():
+            if name in excepts:
+                continue
+
             attr = getattr(self, name, None)
             if isinstance(attr, PyfireCollection):
-                data.pop(name)
-            if isinstance(attr, DatetimeWithNanoseconds):
+                if recursive:
+                    data[name] = attr.as_json(recursive=True)
+                else:
+                    data.pop(name)
+            elif isinstance(attr, DatetimeWithNanoseconds):
                 data[name] = attr.rfc3339()
-        # if "id" in data:  # TODO when original doc has id field. This should be False?
-        #     data.pop('id')
+            if name in include:
+                include.remove(name)
+
+        for name in excepts:
+            data.pop(name)
+
+        for name in include:
+            if name not in data:
+                attr = getattr(self, name)
+                if isinstance(attr, PyfireCollection):
+                    data[name] = attr.as_json(recursive=recursive)
+                elif isinstance(attr, PyfireDoc):
+                    data[name] = attr.as_json(recursive=recursive)
+                else:
+                    data[name] = attr
 
         return data
 
@@ -225,7 +265,7 @@ class PyfireDoc(BaseModel):
         Returns:
             PyfireDoc: The saved document.
         """
-        data = self.doc_field_dump()
+        data = self.as_json(recursive=False)
         if self.id is None:
             _id = QueryRunner(self.obj_collection_name()).create(data)
             if _id:

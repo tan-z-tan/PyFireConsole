@@ -167,7 +167,7 @@ def test_first(mock_db):
     assert user.id in [user1.id, user2.id]
 
 
-def test_model_dump(mock_db):
+def test_as_json(mock_db):
     book = Book.new(
         title="Math",
         user_id="12345",
@@ -175,20 +175,30 @@ def test_model_dump(mock_db):
         authors=["John", "Mary"],
         publisher_ref="publisher/12345",
     ).save()
-
+    tag = book.tags.add(Tag.new(name="mathmatics"))
     user = User.new(
         id=book.user_id,
         name="John",
         email="",
     ).save()
 
-    assert user.model_dump() == {
+    assert User.all().as_json() == [
+        {
+            "id": user.id,
+            "name": "John",
+            "email": "",
+        }
+    ]
+
+    assert User.where("name", "==", "Taro").as_json() == []
+
+    assert user.as_json() == {
         "id": "12345",
         "name": "John",
         "email": "",
     }
 
-    assert book.doc_field_dump() == {
+    assert book.as_json() == {
         "id": book.id,
         "title": "Math",
         "user_id": "12345",
@@ -197,6 +207,50 @@ def test_model_dump(mock_db):
         "edit_info": None,
         "publisher_ref": "publisher/12345",
     }
+
+    assert book.as_json(include=['user']) == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+        "user": {"id": user.id, "name": "John", "email": ""},
+    }
+
+    assert book.as_json(excepts=['id', 'published_at', 'edit_info']) == {
+        "title": "Math",
+        "user_id": "12345",
+        "authors": ["John", "Mary"],
+        "publisher_ref": "publisher/12345",
+    }
+
+    assert book.as_json(recursive=True) == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+        "tags": [{"id": tag.id, "name": "mathmatics", "i18n_names": []}],
+    }
+
+    assert book.as_json(recursive=True, include=["user"]) == {
+        "id": book.id,
+        "title": "Math",
+        "user_id": "12345",
+        "published_at": book.published_at,
+        "authors": ["John", "Mary"],
+        "edit_info": None,
+        "publisher_ref": "publisher/12345",
+        "tags": [{"id": tag.id, "name": "mathmatics", "i18n_names": []}],
+        "user": {"id": user.id, "name": "John", "email": ""},
+    }
+
+    with pytest.raises(AttributeError):
+        book.as_json(recursive=True, include=["invalid_field"])
 
 
 def test_belongs_to(mock_db):
@@ -241,3 +295,34 @@ def test_has_many(mock_db):
 
     assert len([b for b in user.my_books]) == 2
     assert sorted([b.title for b in user.my_books]) == sorted(["Math", "History"])
+
+
+def test_delete(mock_db):
+    user = User.new(
+        name="John",
+        email="",
+    ).save()
+
+    book1 = Book.new(
+        title="Math",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    _book2 = Book.new(
+        title="History",
+        user_id=user.id,
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert len([b for b in user.my_books]) == 2
+    book1.delete()
+    assert len([b for b in user.my_books]) == 1
+    assert user.my_books.first().title == "History"
+
+    with pytest.raises(DocNotFoundException):
+        Book.find(book1.id)

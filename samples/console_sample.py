@@ -37,5 +37,5 @@ class Book(PyfireDoc):
 resolve_pyfire_model_names(globals())
 
 
-FirestoreConnection().initialize(project_id="YOUR_PROJECT_ID")
+FirestoreConnection().initialize(project_id="promptr-dev-prod")
 PyFireConsole().run()
