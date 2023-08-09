@@ -240,6 +240,8 @@ class PyfireDoc(BaseModel):
                     data[name] = attr.as_json(recursive=recursive)
                 elif isinstance(attr, PyfireDoc):
                     data[name] = attr.as_json(recursive=recursive)
+                elif callable(attr):
+                    data[name] = attr()
                 else:
                     data[name] = attr
 
