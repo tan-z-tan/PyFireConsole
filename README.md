@@ -117,6 +117,29 @@ user.my_books.first.user
 => User[users/XXXX](id='XXXX', name='John', email="john@example.com")
 ```
 
+### as_json
+You can convert PyfireDoc object to json serializable dict by using `as_json` method.
+```python
+# dump all admin users, not including sub collection
+User.all().as_json()
+
+# dump all admin users, not including sub collection
+User.where("role", "==", "admin").as_json()
+
+# dump all admin users, including sub collection
+User.where("role", "==", "admin").as_json(recursive=True)
+
+# you can also dump custom attributes
+class User(PyfireDoc):
+    name: str
+    email: str
+
+    def email_domain(self):
+        return self.email.split("@")[1]
+
+User.where("role", "==", "admin").as_json(recursive=True, include=["email_domain"])
+```
+
 ### Example
 We assume that you have a firestore database with the following structure:
 

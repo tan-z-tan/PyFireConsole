@@ -182,6 +182,16 @@ def test_as_json(mock_db):
         email="",
     ).save()
 
+    assert User.all().as_json() == [
+        {
+            "id": user.id,
+            "name": "John",
+            "email": "",
+        }
+    ]
+
+    assert User.where("name", "==", "Taro").as_json() == []
+
     assert user.as_json() == {
         "id": "12345",
         "name": "John",
