@@ -9,9 +9,9 @@ readme = "README.md"
 python = ">=3.10.0"
 google-cloud-firestore = "^2.11.1"
 google-auth = "^2.22.0"
-inflect = "^7.0.0"
 pydantic = "^2.1.1"
 ipython = "^8.14.0"
+inflection = "^0.5.1"
 
 [tool.poetry.group.dev.dependencies]
 wheel = "^0.41.0"

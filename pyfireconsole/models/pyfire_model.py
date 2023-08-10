@@ -1,6 +1,6 @@
 from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
 
-import inflect
+import inflection
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from pydantic import BaseModel
 
@@ -431,7 +431,7 @@ class PyfireDoc(BaseModel):
         Returns:
             str: The Firestore collection name.
         """
-        return inflect.engine().plural(cls.__name__).lower()
+        return inflection.tableize(cls.__name__)
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}[{self.obj_ref_key()}]({super.__str__(self).split('(', 1)[1]}"

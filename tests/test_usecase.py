@@ -334,3 +334,19 @@ def test_delete(mock_db):
 
     with pytest.raises(DocNotFoundException):
         Book.find(book1.id)
+
+
+def test_table_names():
+    class User(PyfireDoc):
+        pass
+    assert User.collection_name() == "users"
+
+    class User(PyfireDoc):
+        @classmethod
+        def collection_name(cls):
+            return "user_collection"
+    assert User.collection_name() == "user_collection"
+
+    class AdminUser(PyfireDoc):
+        pass
+    assert AdminUser.collection_name() == "admin_users"
