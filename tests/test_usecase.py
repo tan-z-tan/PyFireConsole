@@ -114,11 +114,14 @@ def test_subcollection(mock_db):
         publisher_ref="publisher/12345",
     ).save()
 
-    book.tags.add(Tag.new(name="mathmatics"))
+    tag = book.tags.add(Tag.new(name="mathmatics"))
     book.tags.add(Tag.new(name="textbook"))
     # book.save()
 
     assert len([t for t in book.tags]) == 2
+
+    assert Tag.find(tag.obj_ref_key()).obj_ref_key() == f"books/{book.id}/tags/{tag.id}"
+    assert Tag.find(tag.obj_ref_key()).obj_collection_name() == f"books/{book.id}/tags"
 
     tag_names = [tag.name for tag in book.tags]
     assert "mathmatics" in tag_names
@@ -140,6 +143,11 @@ def test_deep_subcollection(mock_db):
     tag.i18n_names.add(I18n_Name(lang="ja", value="数学"))
 
     assert sorted([n.lang for n in tag.i18n_names]) == sorted(["en", "ja"])
+
+    i18n_names_by_find = Tag.find(tag.obj_ref_key()).i18n_names
+
+    assert i18n_names_by_find.obj_collection_name() == f"books/{book.id}/tags/{tag.id}/i18n_names"
+    assert sorted([n.lang for n in i18n_names_by_find]) == sorted(["en", "ja"])
 
     i18n_names = []
     for t in book.tags:

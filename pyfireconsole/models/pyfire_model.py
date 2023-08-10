@@ -165,6 +165,7 @@ class PyfireDoc(BaseModel):
 
     id: Optional[str] = None  # Firestore document id
     _parent: Optional[PyfireCollection] = None  # when a model is a subcollection, this is the parent model
+    _path: Optional[str] = None  # firestore path
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -186,7 +187,10 @@ class PyfireDoc(BaseModel):
         Returns:
             str: The Firestore entity key.
         """
-        return f"{self.obj_collection_name()}/{self.id}"
+        if self._path is not None:
+            return self._path
+        else:
+            return f"{self.obj_collection_name()}/{self.id}"
 
     def obj_collection_name(self) -> str:
         """
@@ -195,11 +199,14 @@ class PyfireDoc(BaseModel):
         Returns:
             str: The Firestore collection name.
         """
-        db_name = self.__class__.collection_name()
-        if self._parent is None:
-            return f"{db_name}"
+        if self._path is not None:
+            return self._path.rsplit('/', 1)[0]
         else:
-            return self._parent.obj_ref_key()
+            db_name = self.__class__.collection_name()
+            if self._parent is None:
+                return f"{db_name}"
+            else:
+                return self._parent.obj_ref_key()
 
     def as_json(self, recursive: bool = False, include: list[str] = [], excepts: list[str] = []) -> dict:
         """
@@ -357,7 +364,9 @@ class PyfireDoc(BaseModel):
                 return cls._empty_doc(id)
             else:
                 raise e
-        return cls.model_validate(d)
+        obj = cls.model_validate(d)
+        obj._path = path
+        return obj
 
     @classmethod
     def first(cls) -> Optional['PyfireDoc']:
