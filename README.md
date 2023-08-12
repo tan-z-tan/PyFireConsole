@@ -142,6 +142,20 @@ class User(PyfireDoc):
 User.where("role", "==", "admin").as_json(recursive=True, include=["email_domain"])
 ```
 
+### Empty document
+You can instantiate empty document by using `allow_empty` option. The sub collection of empty document can be accessed.
+
+```python
+# This is empty document which doesn't exist in firestore but sub collection exists.
+user = User.find("XXXXX", allow_empty=True)
+
+# You can't access empty document's attributes
+# user.name => AttributeError: 'User' object has no attribute 'name'
+
+# You can access sub collection of empty document
+print([n.title for n in user.books])
+```
+
 ### Example
 We assume that you have a firestore database with the following structure:
 
