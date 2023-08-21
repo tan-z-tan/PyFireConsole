@@ -1,6 +1,7 @@
 from typing import Any, Dict, Generator
-from google.cloud.firestore_v1.document import DocumentSnapshot
+
 from google.cloud.firestore_v1.base_query import BaseQuery
+from google.cloud.firestore_v1.document import DocumentSnapshot
 
 from pyfireconsole.db.connection import conn
 from pyfireconsole.queries.abstract_query import _doc_to_dict

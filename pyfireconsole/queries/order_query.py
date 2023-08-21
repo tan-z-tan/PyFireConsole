@@ -1,8 +1,9 @@
 
 from enum import Enum
 
-from pyfireconsole.queries.abstract_query import AbstractQuery
 from google.cloud.firestore_v1.base_query import BaseQuery
+
+from pyfireconsole.queries.abstract_query import AbstractQuery
 
 
 class OrderDirection(str, Enum):

@@ -1,4 +1,4 @@
-from google.cloud.firestore_v1.base_query import FieldFilter, BaseQuery
+from google.cloud.firestore_v1.base_query import BaseQuery, FieldFilter
 from google.cloud.firestore_v1.collection import CollectionReference
 
 from pyfireconsole.queries.abstract_query import AbstractQuery
