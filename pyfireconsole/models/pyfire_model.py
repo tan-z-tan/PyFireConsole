@@ -114,13 +114,13 @@ class PyfireCollection(Generic[ModelType]):
 
         return coll
 
-    def order(self, field: str, direction: str = 'asc') -> 'PyfireCollection[ModelType]':
+    def order(self, field: str, direction: str = 'ASCENDING') -> 'PyfireCollection[ModelType]':
         """
         Order the collection based on the given condition.
 
         Args:
             field (str): The field name to apply the order on.
-            direction (str): The order direction ('asc' or 'desc').
+            direction (str): The order direction, 'ASCENDING' or 'DESCENDING'. Defaults to 'ASCENDING'.
 
         Returns:
             PyfireCollection[ModelType]: A new PyfireCollection instance with the applied order.
@@ -445,7 +445,7 @@ class PyfireDoc(BaseModel):
 
         Args:
             field (str): The field name to apply the order on.
-            direction (str, optional): The order direction ('asc' or 'desc'). Defaults to 'asc'.
+            direction (str, optional): The order direction ('ASCENDING' or 'DESCENDING'). Defaults to 'ASCENDING'.
 
         Returns:
             PyfireCollection[PyfireDoc]: A PyfireCollection instance with the applied order.
