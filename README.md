@@ -237,6 +237,9 @@ print(book.publisher_ref.path)  # => str (So far, we can't access publisher_ref.
 print("==================== where ====================")
 print(Book.where("title", "==", "test"))  # => Book[] Make sure to create index in firestore for compound queries
 
+print("==================== where & order ====================")
+print(Book.where("title", "==", "test").order("published_at", "ASCENDING"))  # => Book[] Make sure to create index in firestore for compound queries
+
 print("==================== has_many ====================")
 print(book.tags)  # => PyfireCollection[Tag]
 print(book.tags.first)  # => Tag

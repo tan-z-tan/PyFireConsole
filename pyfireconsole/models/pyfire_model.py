@@ -5,6 +5,7 @@ from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from pydantic import BaseModel
 
 from pyfireconsole.queries.get_query import DocNotFoundException
+from pyfireconsole.queries.order_query import OrderCondition, OrderDirection
 from pyfireconsole.queries.query_runner import QueryRunner
 from pyfireconsole.queries.where_clouse import WhereCondition
 
@@ -16,6 +17,7 @@ class PyfireCollection(Generic[ModelType]):
     _parent_model: Optional['PyfireDoc'] = None
     _collection: Optional[Iterable[dict]] = None
     _where_cond: Optional[WhereCondition] = None
+    _order_cond: Optional[OrderCondition] = None
 
     def __init__(self, model_class: Type[ModelType]):
         self.model_class = model_class
@@ -51,10 +53,15 @@ class PyfireCollection(Generic[ModelType]):
         Yields:
             ModelType: The current document in the collection iteration.
         """
+        query = QueryRunner(self.obj_ref_key())
         if self._where_cond is not None:
-            self._collection = QueryRunner(self.obj_ref_key()).where(self._where_cond.field, self._where_cond.operator, self._where_cond.value)
+            query = query.where(self._where_cond.field, self._where_cond.operator, self._where_cond.value)
         else:
-            self._collection = QueryRunner(self.obj_ref_key()).all()
+            query = query.all()
+
+        if self._order_cond is not None:
+            query = query.order(self._order_cond.field, self._order_cond.direction)
+        self._collection = query.iter()
 
         for doc in self._collection:
             doc = self.model_class._doc_field_load(doc)
@@ -101,6 +108,25 @@ class PyfireCollection(Generic[ModelType]):
         """
         coll = PyfireCollection(self.model_class)
         coll._where_cond = WhereCondition(field, operator, value)
+        if self._parent_model is not None:
+            coll.set_parent(self._parent_model)
+
+        return coll
+
+    def order(self, field: str, direction: str = 'ASCENDING') -> 'PyfireCollection[ModelType]':
+        """
+        Order the collection based on the given condition.
+
+        Args:
+            field (str): The field name to apply the order on.
+            direction (str): The order direction, 'ASCENDING' or 'DESCENDING'. Defaults to 'ASCENDING'.
+
+        Returns:
+            PyfireCollection[ModelType]: A new PyfireCollection instance with the applied order.
+        """
+        coll = PyfireCollection(self.model_class)
+        coll._where_cond = self._where_cond
+        coll._order_cond = OrderCondition(field, direction)
         if self._parent_model is not None:
             coll.set_parent(self._parent_model)
 
@@ -409,6 +435,25 @@ class PyfireDoc(BaseModel):
         """
         coll = PyfireCollection(cls)
         coll._where_cond = WhereCondition(field, operator, value)
+        return coll
+
+    @classmethod
+    def order(cls, field: str, direction: OrderDirection = "ASCENDING") -> PyfireCollection['PyfireDoc']:
+        """
+        Order the documents based on the given field.
+
+        Args:
+            field (str): The field name to apply the order on.
+            direction (str, optional): The order direction ('ASCENDING' or 'DESCENDING'). Defaults to 'ASCENDING'.
+
+        Returns:
+            PyfireCollection[PyfireDoc]: A PyfireCollection instance with the applied order.
+        """
+        # check if direction is valid
+        direction = OrderDirection(direction)
+
+        coll = PyfireCollection(cls)
+        coll._order_cond = OrderCondition(field, direction)
         return coll
 
     @classmethod

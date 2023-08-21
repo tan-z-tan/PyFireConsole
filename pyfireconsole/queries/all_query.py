@@ -1,10 +1,12 @@
-from pyfireconsole.queries.abstract_query import AbstractQuery, _doc_to_dict
+from google.cloud.firestore_v1.base_query import BaseQuery
+from google.cloud.firestore_v1.collection import CollectionReference
+
+from pyfireconsole.queries.abstract_query import AbstractQuery
 
 
 class AllQuery(AbstractQuery):
-    def __init__(self, collection_key: str):
-        self.collection_key = collection_key
+    def __init__(self, collection_key_or_query: str | BaseQuery):
+        self.collection_key_or_query = collection_key_or_query
 
-    def exec(self) -> list[dict]:
-        docs = self.collection_ref(self.collection_key).stream()
-        return [dict(_doc_to_dict(doc) or {}, id=doc.id) for doc in docs]
+    def exec(self) -> BaseQuery | CollectionReference:
+        return self.collection_ref(self.collection_key_or_query)
