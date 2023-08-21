@@ -7,7 +7,8 @@ from pyfireconsole.models.association import belongs_to, has_many, resolve_pyfir
 from pyfireconsole.models.pyfire_model import DocumentRef, PyfireCollection, PyfireDoc
 from mockfirestore import MockFirestore
 
-from pyfireconsole.queries.get_query import DocNotFoundException  # type: ignore
+from pyfireconsole.queries.get_query import DocNotFoundException
+from pyfireconsole.queries.order_query import OrderDirection  # type: ignore
 
 
 class I18n_Name(PyfireDoc):
@@ -334,6 +335,38 @@ def test_delete(mock_db):
 
     with pytest.raises(DocNotFoundException):
         Book.find(book1.id)
+
+
+def test_order(mock_db):
+    Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+    Book.new(
+        title="History",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+    Book.new(
+        title="English",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert [b.title for b in Book.order("title", "DESCENDING")] == ["Math", "History", "English"]
+    assert [b.title for b in Book.order("title", "ASCENDING")] == ["English", "History", "Math"]
+    assert [b.title for b in Book.order("title", OrderDirection.ASCENDING)] == ["English", "History", "Math"]
+    assert [b.title for b in Book.order("title")] == ["English", "History", "Math"]  # default direction is ASCENDING
+
+    with pytest.raises(ValueError):
+        Book.order("title", "invalid_direction")
 
 
 def test_table_names():
