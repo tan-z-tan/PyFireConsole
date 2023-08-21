@@ -2,7 +2,7 @@ from typing import Generic, Iterable, Optional, Type, TypeVar, get_origin
 
 import inflection
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from pyfireconsole.queries.get_query import DocNotFoundException
 from pyfireconsole.queries.order_query import OrderCondition, OrderDirection
@@ -186,8 +186,7 @@ class DocumentRef(BaseModel, Generic[ModelType]):
 
 
 class PyfireDoc(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: Optional[str] = None  # Firestore document id
     _parent: Optional[PyfireCollection] = None  # when a model is a subcollection, this is the parent model
