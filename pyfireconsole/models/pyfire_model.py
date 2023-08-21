@@ -54,13 +54,15 @@ class PyfireCollection(Generic[ModelType]):
         Yields:
             ModelType: The current document in the collection iteration.
         """
+        query = QueryRunner(self.obj_ref_key())
         if self._where_cond is not None:
-            self._collection = QueryRunner(self.obj_ref_key()).where(self._where_cond.field, self._where_cond.operator, self._where_cond.value)
+            query = query.where(self._where_cond.field, self._where_cond.operator, self._where_cond.value)
         else:
-            self._collection = QueryRunner(self.obj_ref_key()).all()
+            query = query.all()
 
         if self._order_cond is not None:
-            self._collection = QueryRunner(self.obj_ref_key()).order(self._order_cond.field, self._order_cond.direction)
+            query = query.order(self._order_cond.field, self._order_cond.direction)
+        self._collection = query.iter()
 
         for doc in self._collection:
             doc = self.model_class._doc_field_load(doc)
@@ -124,6 +126,7 @@ class PyfireCollection(Generic[ModelType]):
             PyfireCollection[ModelType]: A new PyfireCollection instance with the applied order.
         """
         coll = PyfireCollection(self.model_class)
+        coll._where_cond = self._where_cond
         coll._order_cond = OrderCondition(field, direction)
         if self._parent_model is not None:
             coll.set_parent(self._parent_model)

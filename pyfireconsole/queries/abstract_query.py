@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 
 from google.cloud.firestore_v1.document import DocumentReference, DocumentSnapshot
+from google.cloud.firestore_v1.base_query import BaseQuery
 
 from pyfireconsole.db.connection import FirestoreConnection
 
@@ -10,8 +11,11 @@ class AbstractQuery:
         self.conn = conn
         return self
 
-    def collection_ref(self, collection_key: str):
-        return self.conn.collection(collection_key)
+    def collection_ref(self, collection_key_or_query: str | BaseQuery) -> DocumentReference | BaseQuery:
+        if isinstance(collection_key_or_query, str):
+            return self.conn.collection(collection_key_or_query)
+        else:
+            return collection_key_or_query
 
     def exec(self):
         raise NotImplementedError

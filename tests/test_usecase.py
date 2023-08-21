@@ -369,6 +369,34 @@ def test_order(mock_db):
         Book.order("title", "invalid_direction")
 
 
+def test_combination_order_and_where(mock_db):
+    Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+    Book.new(
+        title="History",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+    Book.new(
+        title="English",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert [b.title for b in Book.where("title", "==", "Math").order("title", "DESCENDING")] == ["Math"]
+    assert [b.title for b in Book.where("title", "==", "Math").order("title", "ASCENDING")] == ["Math"]
+    assert [b.title for b in Book.where("title", "==", "Math").order("title")] == ["Math"]
+
+
 def test_table_names():
     class User(PyfireDoc):
         pass

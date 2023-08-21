@@ -1,6 +1,9 @@
-from typing import Dict
+from typing import Any, Dict, Generator
+from google.cloud.firestore_v1.document import DocumentSnapshot
+from google.cloud.firestore_v1.base_query import BaseQuery
 
 from pyfireconsole.db.connection import conn
+from pyfireconsole.queries.abstract_query import _doc_to_dict
 from pyfireconsole.queries.all_query import AllQuery
 from pyfireconsole.queries.delete_query import DeleteQuery
 from pyfireconsole.queries.get_query import GetQuery
@@ -13,18 +16,22 @@ class QueryRunner:
     def __init__(self, collection_key: str):
         self.conn = conn
         self.collection_key = collection_key
+        self.query = None
 
     def get(self, id: str) -> Dict | None:
         return GetQuery(self.collection_key, id).set_conn(self.conn).exec()
 
-    def where(self, field: str, operator: str, value: str) -> list[Dict]:
-        return WhereQuery(self.collection_key, field, operator, value).set_conn(self.conn).exec()
+    def where(self, field: str, operator: str, value: str) -> 'QueryRunner':
+        self.query = WhereQuery(self.query or self.collection_key, field, operator, value).set_conn(self.conn).exec()
+        return self
 
-    def order(self, field: str, direction: str) -> list[Dict]:
-        return OrderQuery(self.collection_key, field, direction).set_conn(self.conn).exec()
+    def order(self, field: str, direction: str) -> 'QueryRunner':
+        self.query = OrderQuery(self.query or self.collection_key, field, direction).set_conn(self.conn).exec()
+        return self
 
-    def all(self) -> list[Dict]:
-        return AllQuery(self.collection_key).set_conn(self.conn).exec()
+    def all(self) -> 'QueryRunner':
+        self.query = AllQuery(self.query or self.collection_key).set_conn(self.conn).exec()
+        return self
 
     def save(self, id: str, data: dict) -> str | None:
         return SaveQuery(self.collection_key, id, data).set_conn(self.conn).exec()
@@ -34,3 +41,8 @@ class QueryRunner:
 
     def delete(self, id: str) -> None:
         return DeleteQuery(self.collection_key, id).set_conn(self.conn).exec()
+
+    def iter(self) -> Generator[Dict[str, Any], None, None]:
+        docs = self.query.stream()
+        for doc in docs:
+            yield dict(_doc_to_dict(doc) or {}, id=doc.id)

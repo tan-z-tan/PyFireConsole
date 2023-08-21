@@ -1,7 +1,8 @@
 
 from enum import Enum
 
-from pyfireconsole.queries.abstract_query import AbstractQuery, _doc_to_dict
+from pyfireconsole.queries.abstract_query import AbstractQuery
+from google.cloud.firestore_v1.base_query import BaseQuery
 
 
 class OrderDirection(str, Enum):
@@ -10,13 +11,14 @@ class OrderDirection(str, Enum):
 
 
 class OrderQuery(AbstractQuery):
-    def __init__(self, collection_key: str, field: str, direction: OrderDirection):
-        self.collection_key = collection_key
+    def __init__(self, collection_key_or_query: str | BaseQuery, field: str, direction: OrderDirection):
+        self.collection_key_or_query = collection_key_or_query
         self.field = field
         self.direction = direction
 
     def exec(self):
-        docs = self.collection_ref(self.collection_key).order_by(
+        base = self.collection_ref(self.collection_key_or_query)
+
+        return base.order_by(
             self.field, direction=self.direction
-        ).stream()
-        return [dict(_doc_to_dict(doc) or {}, id=doc.id) for doc in docs]
+        )
