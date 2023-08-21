@@ -11,6 +11,15 @@ class OrderDirection(str, Enum):
     DESCENDING = "DESCENDING"
 
 
+class OrderCondition:
+    field: str
+    direction: str
+
+    def __init__(self, field: str, direction: str):
+        self.field = field
+        self.direction = direction
+
+
 class OrderQuery(AbstractQuery):
     def __init__(self, collection_key_or_query: str | BaseQuery, field: str, direction: OrderDirection):
         self.collection_key_or_query = collection_key_or_query

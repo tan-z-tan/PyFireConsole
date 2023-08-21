@@ -4,9 +4,8 @@ import inflection
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from pydantic import BaseModel
 
-from pyfireconsole.models.order_condition import OrderCondition
 from pyfireconsole.queries.get_query import DocNotFoundException
-from pyfireconsole.queries.order_query import OrderDirection
+from pyfireconsole.queries.order_query import OrderCondition, OrderDirection
 from pyfireconsole.queries.query_runner import QueryRunner
 from pyfireconsole.queries.where_clouse import WhereCondition
 
