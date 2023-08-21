@@ -238,7 +238,7 @@ print("==================== where ====================")
 print(Book.where("title", "==", "test"))  # => Book[] Make sure to create index in firestore for compound queries
 
 print("==================== where & order ====================")
-print(Book.where("title", "==", "test").order("name", "ASCENDING"))  # => Book[] Make sure to create index in firestore for compound queries
+print(Book.where("title", "==", "test").order("published_at", "ASCENDING"))  # => Book[] Make sure to create index in firestore for compound queries
 
 print("==================== has_many ====================")
 print(book.tags)  # => PyfireCollection[Tag]
