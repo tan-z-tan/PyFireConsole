@@ -5,7 +5,23 @@ import os
 import sys
 from typing import Optional
 
-from IPython.terminal.embed import embed
+from IPython.terminal.embed import InteractiveShellEmbed
+from IPython.terminal.ipapp import load_default_config
+from IPython.terminal.prompts import Prompts, Token
+
+
+def _generate_funny_prompt_config(prompt_char: str):
+    class FirePrompts(Prompts):
+        def in_prompt_tokens(self, cli=None):
+            return [
+                (Token.Prompt, f'{prompt_char} ['),
+                (Token.PromptNum, str(self.shell.execution_count)),
+                (Token.Prompt, ']: ')
+            ]
+
+    cfg = load_default_config()
+    cfg.TerminalInteractiveShell.prompts_class=FirePrompts
+    return cfg
 
 
 class PyFireConsole:
@@ -39,4 +55,11 @@ class PyFireConsole:
 
         # Start the interactive shell
         user_ns = None if reset_global else caller_globals
-        embed(banner1="\n==================== Welcome to PyFireConsole ====================\n", exit_msg="Bye", user_ns=user_ns, confirm_exit=False)
+        ipshell = InteractiveShellEmbed.instance(
+            banner1="\n==================== Welcome to PyFireConsole ====================\n",
+            exit_msg="Bye",
+            user_ns=user_ns,
+            confirm_exit=False,
+            config=_generate_funny_prompt_config('🔥'),
+        )
+        ipshell()
