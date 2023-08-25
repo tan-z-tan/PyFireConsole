@@ -1,6 +1,6 @@
 import argparse
-from pyfireconsole import FirestoreConnection
-from pyfireconsole import PyFireConsole
+
+from pyfireconsole import FirestoreConnection, PyFireConsole
 
 
 def main():
