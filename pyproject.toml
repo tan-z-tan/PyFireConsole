@@ -1,7 +1,5 @@
 [tool.poetry]
 name = "pyfireconsole"
-version = "0.0.12"
-description = ""
 authors = ["Makoto Tanji <tanji.makoto@gmail.com>"]
 readme = "README.md"
 
