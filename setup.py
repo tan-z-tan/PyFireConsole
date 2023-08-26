@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyfireconsole',
-    version='0.0.12',
+    version='0.1.0',
     author='Makoto Tanji',
     author_email='tanji.makoto@gmail.com',
     description='An interactive console for Firestore based on Python ORM',
@@ -19,10 +19,21 @@ setup(
         'ipython>=7.0.1,<9.0.0',
     ],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.10',
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
+        "Topic :: Software Development :: Libraries",
     ],
     entry_points={
         'console_scripts': [

@@ -249,7 +249,55 @@ print(book.tags.first)  # => Tag
 PyFireConsole comes with an interactive console that allows developer to view and manipulate Firestore data in a live and easily.
 This feature is inspired by the Rails console.
 
-How to setup interactive console:
+First, you need to define your models.
+```python
+# app/models/models.py
+
+from datetime import datetime
+from typing import Optional
+from pyfireconsole.models.association import belongs_to, has_many, resolve_pyfire_model_names
+from pyfireconsole.models.pyfire_model import PyfireCollection, DocumentRef, PyfireDoc
+from pyfireconsole.db.connection import FirestoreConnection
+from pyfireconsole import PyFireConsole
+
+
+@has_many('Book', "user_id")
+class User(PyfireDoc):
+    name: str
+    email: str
+
+
+class Publisher(PyfireDoc):
+    name: str
+    address: Optional[str]
+
+
+class Tag(PyfireDoc):
+    name: str
+
+
+@belongs_to(User, "user_id")
+class Book(PyfireDoc):
+    title: str
+    user_id: str
+    published_at: datetime
+    authors: list[str]
+    tags: PyfireCollection[Tag] = PyfireCollection(Tag)
+    publisher_ref: DocumentRef[Publisher]
+```
+
+Start interactive console by using `pyfireconsole` command.
+```bash
+pyfireconsole --model-dir app/models
+```
+This command loads all python classes in `app/models` directory and starts interactive console.
+
+- --model-di: model directory path
+- --project-id: project id (optional)
+- --service-account-key-path: service account key path (optional)
+
+### Invoke console from your code
+You can also call `PyFireConsole().run()` from your code.
 
 ```python
 from datetime import datetime
@@ -291,22 +339,6 @@ resolve_pyfire_model_names(globals())
 
 FirestoreConnection().initialize(project_id="YOUR_PROJECT_ID")
 PyFireConsole().run()
-```
-
-
-Alternatively, you can define your model files in `app/models/` and initialize the console as follows:
-
-```python
-from pyfireconsole.db.connection import FirestoreConnection
-from pyfireconsole import PyFireConsole
-from pyfireconsole.models.association import resolve_pyfire_model_names
-
-# Resolve PyfireModel names
-resolve_pyfire_model_names(globals())
-
-
-FirestoreConnection().initialize(project_id="YOUR-PROJECT-ID")
-PyFireConsole(model_dir="app/models").run()
 ```
 
 Through the interactive console, you can conveniently test and experiment with your Firestore data models.
