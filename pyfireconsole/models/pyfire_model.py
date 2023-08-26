@@ -376,6 +376,7 @@ class PyfireDoc(BaseModel):
         if path.find('/') == -1:
             collection_name = cls.collection_name()
             id = path
+            path = f"{collection_name}/{id}"
         else:
             collection_name, id = path.rsplit('/', 1)
 

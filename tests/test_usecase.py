@@ -106,6 +106,35 @@ def test_find_not_found(mock_db):
         Book.find("99999")
 
 
+def test_find_obj_ref_key(mock_db):
+    book = Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref="publisher/12345",
+    ).save()
+
+    assert book.obj_ref_key() == f"books/{book.id}"
+    assert book.obj_collection_name() == "books"
+    assert Book.find(book.id).obj_ref_key() == f"books/{book.id}"
+
+
+def test_deep_find_obj_ref_key(mock_db):
+    book = Book.new(
+        title="Math",
+        user_id="12345",
+        published_at=datetime.now(),
+        authors=["John", "Mary"],
+        publisher_ref=Publisher.new(name="publisher1").save().obj_ref_key(),
+    ).save()
+
+    tag = book.tags.add(Tag.new(name="mathmatics"))
+
+    assert tag.obj_ref_key() == f"books/{book.id}/tags/{tag.id}"
+    assert Tag.find(f"books/{book.id}/tags/{tag.id}").obj_ref_key() == f"books/{book.id}/tags/{tag.id}"
+
+
 def test_subcollection(mock_db):
     book = Book.new(
         title="Math",
