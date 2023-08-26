@@ -9,6 +9,8 @@ from IPython.terminal.embed import InteractiveShellEmbed
 from IPython.terminal.ipapp import load_default_config
 from IPython.terminal.prompts import Prompts, Token
 
+from pyfireconsole.models.association import resolve_pyfire_model_names
+
 
 def _generate_funny_prompt_config(prompt_char: str):
     class FirePrompts(Prompts):
@@ -52,6 +54,9 @@ class PyFireConsole:
                     if inspect.isclass(obj) and obj.__module__ == module_name and obj.__name__ not in caller_globals:
                         print(f"Importing {obj.__name__} from {module_name}")
                         caller_globals[obj.__name__] = obj
+
+        # resolve all PyfireDoc relationships
+        resolve_pyfire_model_names(caller_globals)
 
         # Start the interactive shell
         user_ns = None if reset_global else caller_globals
