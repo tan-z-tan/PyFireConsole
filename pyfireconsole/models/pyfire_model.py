@@ -18,6 +18,7 @@ class PyfireCollection(Generic[ModelType]):
     _collection: Optional[Iterable[dict]] = None
     _where_cond: Optional[WhereCondition] = None
     _order_cond: Optional[OrderCondition] = None
+    _limit: int = 1000  # default limit to prevent loading too large collections
 
     def __init__(self, model_class: Type[ModelType]):
         self.model_class = model_class
@@ -61,6 +62,9 @@ class PyfireCollection(Generic[ModelType]):
 
         if self._order_cond is not None:
             query = query.order(self._order_cond.field, self._order_cond.direction)
+
+        self._collection = query.limit(self._limit).iter()
+
         self._collection = query.iter()
 
         for doc in self._collection:
@@ -131,6 +135,31 @@ class PyfireCollection(Generic[ModelType]):
             coll.set_parent(self._parent_model)
 
         return coll
+
+    def all(self) -> 'PyfireCollection[ModelType]':
+        """
+        Get all documents in the collection.
+
+        Returns:
+            PyfireCollection[ModelType]: A new PyfireCollection instance containing all documents.
+        """
+        coll = PyfireCollection(self.model_class)
+        coll._where_cond = self._where_cond
+        coll._order_cond = self._order_cond
+        coll._limit = self._limit
+        if self._parent_model is not None:
+            coll.set_parent(self._parent_model)
+
+        return coll
+
+    def to_a(self, limit: int = 1000) -> list[ModelType]:
+        """
+        Convert the collection to a list.
+
+        Returns:
+            list[ModelType]: The collection as a list.
+        """
+        return list(self)
 
     def add(self, entity: ModelType) -> ModelType:
         """

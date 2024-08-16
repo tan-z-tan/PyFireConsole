@@ -205,6 +205,71 @@ def test_first(mock_db):
     assert user.id in [user1.id, user2.id]
 
 
+def test_class_all(mock_db):
+    mock_db = MockFirestore()
+    mock_db.reset()
+
+    user1 = User.new(
+        name="John",
+        email="",
+    ).save()
+    user2 = User.new(
+        name="Mary",
+        email="",
+    ).save()
+
+    users = User.all()
+
+    assert len([u for u in users]) == 2
+    assert user1.id in [u.id for u in users]
+    assert user2.id in [u.id for u in users]
+
+
+def test_collection_all(mock_db):
+    mock_db = MockFirestore()
+    mock_db.reset()
+
+    user1 = User.new(
+        name="John",
+        email="",
+    ).save()
+    user2 = User.new(
+        name="John",
+        email="",
+    ).save()
+    _ = User.new(
+        name="Mary",
+        email="",
+    ).save()
+
+    users = User.where("name", "==", "John").all()
+
+    assert len([u for u in users]) == 2
+    assert user1.id in [u.id for u in users]
+    assert user2.id in [u.id for u in users]
+
+
+def test_to_a(mock_db):
+    mock_db = MockFirestore()
+    mock_db.reset()
+
+    user1 = User.new(
+        name="John",
+        email="",
+    ).save()
+    user2 = User.new(
+        name="Mary",
+        email="",
+    ).save()
+
+    users = User.all().to_a()
+
+    assert len(users) == 2
+    assert type(users) is list
+    assert user1.id in [users[0].id, users[1].id]
+    assert user2.id in [users[0].id, users[1].id]
+
+
 def test_as_json(mock_db):
     book = Book.new(
         title="Math",

@@ -34,6 +34,17 @@ class QueryRunner:
         self.query = AllQuery(self.query or self.collection_key).set_conn(self.conn).exec()
         return self
 
+    def limit(self, limit: int) -> 'QueryRunner':
+        """
+        Apply a limit to the query.
+        Args:
+            limit (int): The maximum number of documents to retrieve.
+        Returns:
+            QueryRunner: The current QueryRunner instance.
+        """
+        self.query = self.query.limit(limit) if self.query else self.conn.collection(self.collection_key).limit(limit)
+        return self
+
     def save(self, id: str, data: dict) -> str | None:
         return SaveQuery(self.collection_key, id, data).set_conn(self.conn).exec()
 
@@ -43,7 +54,10 @@ class QueryRunner:
     def delete(self, id: str) -> None:
         return DeleteQuery(self.collection_key, id).set_conn(self.conn).exec()
 
-    def iter(self) -> Generator[Dict[str, Any], None, None]:
+    def iter(self, limit: int = 1000) -> Generator[Dict[str, Any], None, None]:
         docs = self.query.stream()
+
+        docs = self.query.limit(limit).stream()
+
         for doc in docs:
             yield dict(_doc_to_dict(doc) or {}, id=doc.id)
